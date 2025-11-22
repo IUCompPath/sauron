@@ -2,12 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class FocalLoss(nn.Module):
     """
     Focal Loss for multi-class classification.
-    
     Args:
-        alpha (float, list, torch.Tensor, optional): Weights for each class. 
+        alpha (float, list, torch.Tensor, optional): Weights for each class.
             If float, it's treated as the weight for the rare class (binary).
             If list/Tensor, it should have length equal to number of classes.
         gamma (float): Focusing parameter. Higher values focus more on hard examples. Default: 2.0.
@@ -19,40 +19,42 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
         self.reduction = reduction
         self.label_smoothing = label_smoothing
-        
-        if isinstance(alpha, (list, tuple)):
-            self.alpha = torch.tensor(alpha)
+
+        # OPTIMIZATION: Register alpha as a buffer.
+        # This ensures it automatically moves to GPU when you call model.cuda()
+        # and is saved with the model checkpoint.
+        if alpha is not None:
+            if isinstance(alpha, (list, tuple)):
+                alpha = torch.tensor(alpha, dtype=torch.float32)
+            self.register_buffer('alpha', alpha)
         else:
-            self.alpha = alpha
+            self.alpha = None
 
     def forward(self, inputs, targets):
-        """
-        Args:
-            inputs: Logits [Batch, Num_Classes]
-            targets: Class indices [Batch]
-        """
-        if self.alpha is not None:
-            if self.alpha.device != inputs.device:
-                self.alpha = self.alpha.to(inputs.device)
-        
-        # 1. Compute p_target for Focal Weight (based on true class)
-        probs = F.softmax(inputs, dim=-1)
-        p_target = probs.gather(1, targets.view(-1, 1)).squeeze(1)
-        focal_weight = (1 - p_target) ** self.gamma
-        
-        # 2. Compute Cross Entropy Loss (with optional label smoothing and class weights)
-        # F.cross_entropy handles the class weights (alpha) and label smoothing internally
-        loss = F.cross_entropy(inputs, targets, reduction='none', weight=self.alpha, label_smoothing=self.label_smoothing)
-            
-        # 3. Apply Focal Weight
-        focal_loss = focal_weight * loss
-        
+        # 1. Compute standard Cross Entropy (includes alpha-weighting & smoothing)
+        # We use reduction='none' so we can apply the focal weight per-sample first
+        ce_loss = F.cross_entropy(
+            inputs, 
+            targets, 
+            reduction='none', 
+            weight=self.alpha, 
+            label_smoothing=self.label_smoothing
+        )
+
+        # 2. Compute the Focal Term (1 - pt)
+        # We detach pt here usually to stop gradients flowing back through the weight itself,
+        # but keeping it attached is also valid for "hard" focal loss.
+        pt = torch.exp(-ce_loss) # Mathematical trick: exp(-CE) is effectively pt
+        focal_weight = (1 - pt) ** self.gamma
+
+        # 3. Combine
+        loss = focal_weight * ce_loss
+
         if self.reduction == 'mean':
-            return focal_loss.mean()
+            return loss.mean()
         elif self.reduction == 'sum':
-            return focal_loss.sum()
-        else:
-            return focal_loss
+            return loss.sum()
+        return loss
 
 class Poly1Loss(nn.Module):
     """
@@ -73,21 +75,28 @@ class Poly1Loss(nn.Module):
         self.num_classes = num_classes
         self.epsilon = epsilon
         self.reduction = reduction
-        self.weight = weight
+        
+        # OPTIMIZATION: Register weight as buffer
+        if weight is not None:
+             if isinstance(weight, (list, tuple)):
+                weight = torch.tensor(weight, dtype=torch.float32)
+             self.register_buffer('weight', weight)
+        else:
+            self.weight = None
 
     def forward(self, inputs, targets):
-        if self.weight is not None and self.weight.device != inputs.device:
-            self.weight = self.weight.to(inputs.device)
-
-        # 1. Standard Cross Entropy
+        # 1. Cross Entropy (Base Loss)
         ce_loss = F.cross_entropy(inputs, targets, reduction='none', weight=self.weight)
         
-        # 2. Polynomial term (1 - Pt)
+        # 2. Polynomial Term (Gradient Booster)
         pt = F.softmax(inputs, dim=-1)
         p_target = pt.gather(1, targets.view(-1, 1)).squeeze(1)
+        
+        # The Poly1 term: ε * (1 - Pt)
+        # This pushes the model to not just get the class "mostly right" (Pt=0.6)
+        # but "completely right" (Pt=1.0)
         poly1 = self.epsilon * (1 - p_target)
         
-        # 3. Combine
         loss = ce_loss + poly1
         
         if self.reduction == 'mean':

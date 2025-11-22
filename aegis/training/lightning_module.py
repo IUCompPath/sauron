@@ -34,21 +34,31 @@ class aegis(pl.LightningModule):
                 self.loss_fn = FocalLoss(gamma=2.0, label_smoothing=0.1)
 
             # Use MetricCollection to group metrics
-            metrics = MetricCollection(
-                {
-                    "auc": torchmetrics.AUROC(
-                        task="multiclass", num_classes=args.n_classes
-                    ),
-                    "acc": torchmetrics.Accuracy(
-                        task="multiclass", num_classes=args.n_classes
-                    ),
-                }
-            )
+            # LIGHTWEIGHT metrics for Training
+            self.train_metrics = MetricCollection({
+                "acc": torchmetrics.Accuracy(
+                    task="multiclass", num_classes=args.n_classes
+                )
+            })
 
-            # Clone for different stages to maintain separate states
-            self.train_metrics = metrics.clone(prefix="train_")
-            self.val_metrics = metrics.clone(prefix="val_")
-            self.test_metrics = metrics.clone(prefix="test_")
+            # HEAVY metrics for Validation (Keep AUROC here)
+            self.val_metrics = MetricCollection({
+                "auc": torchmetrics.AUROC(
+                    task="multiclass", num_classes=args.n_classes
+                ),
+                "acc": torchmetrics.Accuracy(
+                    task="multiclass", num_classes=args.n_classes
+                ),
+            }, prefix="val_")
+
+            self.test_metrics = MetricCollection({
+                "auc": torchmetrics.AUROC(
+                    task="multiclass", num_classes=args.n_classes
+                ),
+                "acc": torchmetrics.Accuracy(
+                    task="multiclass", num_classes=args.n_classes
+                ),
+            }, prefix="test_")
 
         elif self.args.task_type.lower() == "survival":
             if self.args.bag_loss == "nll_surv":
@@ -68,7 +78,7 @@ class aegis(pl.LightningModule):
         results = {}
 
         if self.args.task_type.lower() == "classification":
-            data, label = batch[0], batch[1]  # Robust to 2 or 3 item batches
+            data, label = batch[0], batch[1]
             logits, probs, preds, _, _ = self.model(data)
             loss = self.loss_fn(logits, label)
 
@@ -77,9 +87,8 @@ class aegis(pl.LightningModule):
         elif self.args.task_type.lower() == "survival":
             data, label, event, c = batch
             hazards, S, preds, _, _ = self.model(data)
-
             loss = self.loss_fn(hazards=hazards, S=S, Y=label, c=c)
-            risk = -torch.sum(S, dim=1)
+            risk = -torch.sum(S, dim=1).detach() 
 
             results.update({"loss": loss, "risk": risk, "event": event, "c": c})
 
@@ -99,8 +108,7 @@ class aegis(pl.LightningModule):
         )
 
         if self.args.task_type.lower() == "classification":
-            # Update all metrics at once
-            output = self.train_metrics(res["probs"], res["label"])
+            output = self.train_metrics(res["probs"].detach(), res["label"])
             self.log_dict(output, on_step=False, on_epoch=True, prog_bar=True)
 
         return loss

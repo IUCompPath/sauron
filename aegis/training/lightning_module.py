@@ -36,17 +36,17 @@ class aegis(pl.LightningModule):
             # Use MetricCollection to group metrics
             # LIGHTWEIGHT metrics for Training
             self.train_metrics = MetricCollection({
-                "acc": torchmetrics.Accuracy(
+                "bal_acc": torchmetrics.BalancedAccuracy(
                     task="multiclass", num_classes=args.n_classes
                 )
-            })
+            }, prefix="train_")
 
             # HEAVY metrics for Validation (Keep AUROC here)
             self.val_metrics = MetricCollection({
                 "auc": torchmetrics.AUROC(
                     task="multiclass", num_classes=args.n_classes
                 ),
-                "acc": torchmetrics.Accuracy(
+                "bal_acc": torchmetrics.BalancedAccuracy(
                     task="multiclass", num_classes=args.n_classes
                 ),
             }, prefix="val_")
@@ -55,7 +55,7 @@ class aegis(pl.LightningModule):
                 "auc": torchmetrics.AUROC(
                     task="multiclass", num_classes=args.n_classes
                 ),
-                "acc": torchmetrics.Accuracy(
+                "bal_acc": torchmetrics.BalancedAccuracy(
                     task="multiclass", num_classes=args.n_classes
                 ),
             }, prefix="test_")
@@ -108,10 +108,15 @@ class aegis(pl.LightningModule):
         )
 
         if self.args.task_type.lower() == "classification":
-            output = self.train_metrics(res["probs"].detach(), res["label"])
-            self.log_dict(output, on_step=False, on_epoch=True, prog_bar=True)
+            self.train_metrics.update(res["probs"].detach(), res["label"])
 
         return loss
+
+    def on_train_epoch_end(self):
+        if self.args.task_type.lower() == "classification":
+            output = self.train_metrics.compute()
+            self.log_dict(output, prog_bar=True)
+            self.train_metrics.reset()
 
     def validation_step(self, batch, batch_idx):
         res = self._get_outputs_and_loss(batch)

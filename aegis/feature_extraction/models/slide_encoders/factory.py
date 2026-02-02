@@ -207,9 +207,9 @@ class ABMILSlideEncoder(BaseSlideEncoder):
 
         self.enc_name = "abmil"
 
-        assert pretrained is False, (
-            "ABMILSlideEncoder has no corresponding pretrained models. Please load with pretrained=False."
-        )
+        assert (
+            pretrained is False
+        ), "ABMILSlideEncoder has no corresponding pretrained models. Please load with pretrained=False."
 
         pre_attention_layers = nn.Sequential(
             nn.Linear(input_feature_dim, input_feature_dim), nn.GELU(), nn.Dropout(0.1)
@@ -486,9 +486,9 @@ class MadeleineSlideEncoder(BaseSlideEncoder):
         super().__init__(**build_kwargs)
 
     def _build(self, pretrained=True):
-        assert pretrained, (
-            "MadeleineSlideEncoder has no non-pretrained models. Please load with pretrained=True."
-        )
+        assert (
+            pretrained
+        ), "MadeleineSlideEncoder has no non-pretrained models. Please load with pretrained=True."
 
         self.enc_name = "madeleine"
         weights_path = self._get_weights_path()
@@ -576,9 +576,9 @@ class TitanSlideEncoder(BaseSlideEncoder):
 
     def _build(self, pretrained=True):
         self.enc_name = "titan"
-        assert pretrained, (
-            "TitanSlideEncoder has no non-pretrained models. Please load with pretrained=True."
-        )
+        assert (
+            pretrained
+        ), "TitanSlideEncoder has no non-pretrained models. Please load with pretrained=True."
 
         try:
             from transformers import AutoModel  # type: ignore

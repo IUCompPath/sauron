@@ -84,7 +84,7 @@ class SplitManager:
             label_frac=safe_getattr(self.args, "label_frac", 1.0),
             custom_test_ids=safe_getattr(self.args, "custom_test_ids", None),
         )
-        
+
         # If the manager knows how many folds were actually generated (e.g. 1 for manual splits), respect that.
         num_generated = getattr(data_manager, "num_folds_generated", self.args.k)
         return range(self.args.k_start, min(self.args.k_end, num_generated))

@@ -2,6 +2,7 @@ import os
 import shutil
 from typing import List
 
+
 def cache_batch(wsis: List[str], dest_dir: str) -> List[str]:
     """
     Copies WSIs to a local cache directory. Handles .mrxs subdirectories if present.

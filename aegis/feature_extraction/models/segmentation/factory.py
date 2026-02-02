@@ -158,9 +158,9 @@ class HESTSegmenter(SegmentationModel):
 
     def forward(self, image: torch.Tensor) -> torch.Tensor:
         # input should be of shape (batch_size, C, H, W)
-        assert len(image.shape) == 4, (
-            f"Input must be 4D image tensor (shape: batch_size, C, H, W), got {image.shape} instead"
-        )
+        assert (
+            len(image.shape) == 4
+        ), f"Input must be 4D image tensor (shape: batch_size, C, H, W), got {image.shape} instead"
         logits = self.model(image)["out"]
         softmax_output = F.softmax(logits, dim=1)
         predictions = (softmax_output[:, 1, :, :] > self.confidence_thresh).to(
@@ -486,6 +486,7 @@ def segmentation_model_factory(
         return ClassicSegmenter(freeze=freeze, **build_kwargs)
     elif model_name == "clam":
         from aegis.feature_extraction.models.segmentation.clam import ClamSegmenter
+
         return ClamSegmenter(freeze=freeze, **build_kwargs)
     else:
         raise ValueError(f"Model type {model_name} not supported")

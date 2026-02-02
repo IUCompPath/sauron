@@ -114,7 +114,7 @@ def train_fold(
     # Load best model from checkpoint
     best_checkpoint_path = checkpoint_callback.best_model_path
     print(f"Best checkpoint path: {best_checkpoint_path}")
-    
+
     # Validate checkpoint path
     if not best_checkpoint_path or not os.path.exists(best_checkpoint_path):
         print(f"Warning: Best checkpoint not found at '{best_checkpoint_path}'")

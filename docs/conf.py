@@ -13,22 +13,23 @@
 import os
 import subprocess
 import sys
-sys.path.insert(0, os.path.abspath('./../'))
+
+sys.path.insert(0, os.path.abspath("./../"))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'AEGIS'
-copyright = '2025, Siddhesh Thakur'
-author = 'Siddhesh Thakur'
+project = "AEGIS"
+copyright = "2025, Siddhesh Thakur"
+author = "Siddhesh Thakur"
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.1.1'
+release = "v0.1.1"
 
 # HTML style
-html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
-html_logo = '_static/aegis_logo.svg'
+html_theme = "sphinx_rtd_theme"
+html_static_path = ["_static"]
+html_logo = "_static/aegis_logo.svg"
 html_theme_options = {
     "sidebar_hide_name": True,
 }
@@ -39,23 +40,23 @@ html_theme_options = {
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon',  # For NumPy or Google-style docstrings
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.napoleon",  # For NumPy or Google-style docstrings
     "sphinx_design",
 ]
 autosummary_generate = True
 
-autoclass_content = 'both'  # Shows class-level and __init__ docstring
+autoclass_content = "both"  # Shows class-level and __init__ docstring
 napoleon_include_init_with_doc = True  # for Google/NumPy-style docstrings
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_context = {
     "display_github": True,
@@ -67,14 +68,18 @@ html_context = {
 
 # === Auto-generate CLI help files before building docs ===
 
+
 def run_cli_generate():
     print("Auto-generating CLI help text...")
-    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    cli_generate_script = os.path.join(root_dir, 'docs', 'cli_helpers', 'cli_generate.py')
-    output_help_dir = os.path.join(root_dir, 'docs', 'generated')
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    cli_generate_script = os.path.join(
+        root_dir, "docs", "cli_helpers", "cli_generate.py"
+    )
+    output_help_dir = os.path.join(root_dir, "docs", "generated")
 
     os.makedirs(output_help_dir, exist_ok=True)
 
     subprocess.run(["python", cli_generate_script], check=True)
+
 
 run_cli_generate()

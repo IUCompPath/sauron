@@ -203,7 +203,9 @@ def main():
     # --- Print Summary Report ---
     print("\n\n--- Profiling Summary ---")
     print("\n* Preloading Times *")
-    print(f"  - HDF5 (.h5) files:    {results.get('preload_hdf5_time', -1):.4f} seconds")
+    print(
+        f"  - HDF5 (.h5) files:    {results.get('preload_hdf5_time', -1):.4f} seconds"
+    )
     print(f"  - PyTorch (.pt) files: {results.get('preload_pt_time', -1):.4f} seconds")
     print("\n* DataLoader Iteration Times (Average per Epoch) *")
 
@@ -236,7 +238,9 @@ def main():
     print(
         "\nDecision: If the best 'DataLoader Iteration Time' is lower than the 'Preloading Time', you should probably avoid preloading. If preloading is faster and the initial delay is acceptable, it might be a good choice."
     )
-    print("\nNote: `tqdm` is used for progress bars. If not installed, run: `pip install tqdm`")
+    print(
+        "\nNote: `tqdm` is used for progress bars. If not installed, run: `pip install tqdm`"
+    )
 
 
 if __name__ == "__main__":

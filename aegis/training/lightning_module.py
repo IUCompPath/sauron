@@ -26,39 +26,50 @@ class aegis(pl.LightningModule):
         if self.args.task_type.lower() == "classification":
             if getattr(self.args, "loss_type", "focal") == "poly":
                 from aegis.losses.classification_loss import Poly1Loss
+
                 # Using Poly1Loss with epsilon=1.0
                 self.loss_fn = Poly1Loss(num_classes=args.n_classes, epsilon=1.0)
             else:
                 from aegis.losses.classification_loss import FocalLoss
+
                 # Using Focal Loss with Label Smoothing (0.1) and Gamma (2.0) to handle class imbalance and overfitting
                 self.loss_fn = FocalLoss(gamma=2.0, label_smoothing=0.1)
 
             # Use MetricCollection to group metrics
             # LIGHTWEIGHT metrics for Training
-            self.train_metrics = MetricCollection({
-                "bal_acc": torchmetrics.BalancedAccuracy(
-                    task="multiclass", num_classes=args.n_classes
-                )
-            }, prefix="train_")
+            self.train_metrics = MetricCollection(
+                {
+                    "bal_acc": torchmetrics.BalancedAccuracy(
+                        task="multiclass", num_classes=args.n_classes
+                    )
+                },
+                prefix="train_",
+            )
 
             # HEAVY metrics for Validation (Keep AUROC here)
-            self.val_metrics = MetricCollection({
-                "auc": torchmetrics.AUROC(
-                    task="multiclass", num_classes=args.n_classes
-                ),
-                "bal_acc": torchmetrics.BalancedAccuracy(
-                    task="multiclass", num_classes=args.n_classes
-                ),
-            }, prefix="val_")
+            self.val_metrics = MetricCollection(
+                {
+                    "auc": torchmetrics.AUROC(
+                        task="multiclass", num_classes=args.n_classes
+                    ),
+                    "bal_acc": torchmetrics.BalancedAccuracy(
+                        task="multiclass", num_classes=args.n_classes
+                    ),
+                },
+                prefix="val_",
+            )
 
-            self.test_metrics = MetricCollection({
-                "auc": torchmetrics.AUROC(
-                    task="multiclass", num_classes=args.n_classes
-                ),
-                "bal_acc": torchmetrics.BalancedAccuracy(
-                    task="multiclass", num_classes=args.n_classes
-                ),
-            }, prefix="test_")
+            self.test_metrics = MetricCollection(
+                {
+                    "auc": torchmetrics.AUROC(
+                        task="multiclass", num_classes=args.n_classes
+                    ),
+                    "bal_acc": torchmetrics.BalancedAccuracy(
+                        task="multiclass", num_classes=args.n_classes
+                    ),
+                },
+                prefix="test_",
+            )
 
         elif self.args.task_type.lower() == "survival":
             if self.args.bag_loss == "nll_surv":
@@ -88,7 +99,7 @@ class aegis(pl.LightningModule):
             data, label, event, c = batch
             hazards, S, preds, _, _ = self.model(data)
             loss = self.loss_fn(hazards=hazards, S=S, Y=label, c=c)
-            risk = -torch.sum(S, dim=1).detach() 
+            risk = -torch.sum(S, dim=1).detach()
 
             results.update({"loss": loss, "risk": risk, "event": event, "c": c})
 

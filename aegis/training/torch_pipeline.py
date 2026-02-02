@@ -13,7 +13,7 @@ from aegis.utils.optimizers import get_optim
 
 
 class EarlyStopping:
-    def __init__(self, patience=20, mode='max', verbose=True):
+    def __init__(self, patience=20, mode="max", verbose=True):
         self.patience = patience
         self.mode = mode
         self.verbose = verbose
@@ -24,11 +24,12 @@ class EarlyStopping:
     def __call__(self, score):
         if self.best_score is None:
             self.best_score = score
-        elif (self.mode == 'max' and score < self.best_score) or \
-             (self.mode == 'min' and score > self.best_score):
+        elif (self.mode == "max" and score < self.best_score) or (
+            self.mode == "min" and score > self.best_score
+        ):
             self.counter += 1
             if self.verbose:
-                print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+                print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -100,11 +101,13 @@ def train_fold(
             model.train_metrics.reset()
 
         train_loss = 0.0
-        pbar = tqdm(train_loader, desc=f"Fold {cur_fold_num} Epoch {epoch} Train", leave=False)
-        
+        pbar = tqdm(
+            train_loader, desc=f"Fold {cur_fold_num} Epoch {epoch} Train", leave=False
+        )
+
         for batch in pbar:
             batch = [b.to(device) if isinstance(b, torch.Tensor) else b for b in batch]
-            
+
             optimizer.zero_grad()
             res = model.compute_step(batch)
             loss = res["loss"]
@@ -112,7 +115,7 @@ def train_fold(
             optimizer.step()
 
             train_loss += loss.item()
-            pbar.set_postfix({'loss': loss.item()})
+            pbar.set_postfix({"loss": loss.item()})
 
             if args.task_type == "classification":
                 model.train_metrics.update(res["probs"], res["label"])
@@ -137,7 +140,9 @@ def train_fold(
 
         with torch.no_grad():
             for batch in val_loader:
-                batch = [b.to(device) if isinstance(b, torch.Tensor) else b for b in batch]
+                batch = [
+                    b.to(device) if isinstance(b, torch.Tensor) else b for b in batch
+                ]
                 res = model.compute_step(batch)
                 val_loss += res["loss"].item()
 
@@ -164,14 +169,18 @@ def train_fold(
                 cs = torch.cat(val_cs).numpy()
                 event_observed = (1 - cs).astype(bool)
                 try:
-                    c_index = concordance_index_censored(event_observed, events, risks)[0]
+                    c_index = concordance_index_censored(event_observed, events, risks)[
+                        0
+                    ]
                     writer.add_scalar("val_c_index", c_index, epoch)
                     current_metric = c_index
                 except Exception as e:
                     print(f"Error computing C-Index: {e}")
                     current_metric = 0.0
 
-        print(f"Epoch {epoch}: Train Loss {avg_train_loss:.4f}, Val Loss {avg_val_loss:.4f}, {monitor_metric} {current_metric:.4f}")
+        print(
+            f"Epoch {epoch}: Train Loss {avg_train_loss:.4f}, Val Loss {avg_val_loss:.4f}, {monitor_metric} {current_metric:.4f}"
+        )
 
         # --- Checkpoint ---
         save = False
@@ -204,14 +213,16 @@ def train_fold(
             # Use test_metrics for consistency or clone a new one
             metrics_collection = model.test_metrics.clone(prefix=f"{prefix}_")
             metrics_collection.reset()
-        
+
         risks, events, cs = [], [], []
-        
+
         with torch.no_grad():
             for batch in loader:
-                batch = [b.to(device) if isinstance(b, torch.Tensor) else b for b in batch]
+                batch = [
+                    b.to(device) if isinstance(b, torch.Tensor) else b for b in batch
+                ]
                 res = model.compute_step(batch)
-                
+
                 if args.task_type == "classification":
                     metrics_collection.update(res["probs"], res["label"])
                 elif args.task_type == "survival":
@@ -234,11 +245,13 @@ def train_fold(
                     results[f"{prefix}_c_index"] = c_idx
                 except Exception:
                     results[f"{prefix}_c_index"] = 0.0
-        
+
         return results
 
     # Evaluate on Val (again, for return values) and Test
-    val_results = evaluate_set(val_loader, prefix="test") # Pipeline uses 'test' prefix for val results return
+    val_results = evaluate_set(
+        val_loader, prefix="test"
+    )  # Pipeline uses 'test' prefix for val results return
     test_results = evaluate_set(test_loader, prefix="test")
 
     writer.close()

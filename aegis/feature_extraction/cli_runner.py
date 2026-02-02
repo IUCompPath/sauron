@@ -83,9 +83,11 @@ def run_feature_extraction_task(processor: Processor, args):
             seg_mag=segmentation_model.target_mag,  # Use model's recommended target_mag
             holes_are_tissue=not args.remove_holes,
             artifact_remover_model=artifact_remover_model,
-            batch_size=args.seg_batch_size
-            if args.seg_batch_size is not None
-            else args.batch_size,
+            batch_size=(
+                args.seg_batch_size
+                if args.seg_batch_size is not None
+                else args.batch_size
+            ),
             device=device_str,
         )
     elif args.task == "coords":
@@ -120,9 +122,11 @@ def run_feature_extraction_task(processor: Processor, args):
                 patch_encoder=patch_encoder,
                 device=device_str,
                 saveas="h5",  # Hardcoded to h5 for now, as it's common for MIL
-                batch_limit=args.feat_batch_size
-                if args.feat_batch_size is not None
-                else args.batch_size,
+                batch_limit=(
+                    args.feat_batch_size
+                    if args.feat_batch_size is not None
+                    else args.batch_size
+                ),
             )
         else:
             # Slide Feature Extraction
@@ -134,9 +138,11 @@ def run_feature_extraction_task(processor: Processor, args):
                 slide_encoder=slide_encoder,
                 device=device_str,
                 saveas="h5",  # Hardcoded to h5 for now
-                batch_limit_for_patch_features=args.feat_batch_size
-                if args.feat_batch_size is not None
-                else args.batch_size,
+                batch_limit_for_patch_features=(
+                    args.feat_batch_size
+                    if args.feat_batch_size is not None
+                    else args.batch_size
+                ),
             )
     elif args.task == "cache":
         # In this mode, we only populate the cache, the main loop in main() handles it

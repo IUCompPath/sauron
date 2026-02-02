@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import h5py
 
+
 def create_dummy_features(csv_path, output_dir="dummy_features"):
     """
     Reads a CSV file with slide IDs and creates dummy HDF5 feature files.
@@ -31,19 +32,19 @@ def create_dummy_features(csv_path, output_dir="dummy_features"):
     for slide_id in df["slide_id"]:
         # Generate a random number of features (N) between 200 and 2001
         n_features = np.random.randint(200, 2001)
-        
+
         # Create dummy features of size (N, 1024)
         features = np.random.rand(n_features, 1024).astype(np.float32)
-        
+
         # Define the output HDF5 file path
         h5_filename = f"{slide_id}.h5"
         h5_filepath = os.path.join(output_dir, h5_filename)
-        
+
         try:
             # Store the features in an HDF5 file
             with h5py.File(h5_filepath, "w") as hf:
                 hf.create_dataset("features", data=features)
-            
+
             print(f"Created {h5_filepath} with features of shape {features.shape}")
 
         except Exception as e:
@@ -63,8 +64,9 @@ def main():
         help="Path to the input CSV file containing slide IDs.",
     )
     args = parser.parse_args()
-    
+
     create_dummy_features(args.csv_file)
+
 
 if __name__ == "__main__":
     main()

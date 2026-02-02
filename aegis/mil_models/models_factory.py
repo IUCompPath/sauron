@@ -15,6 +15,7 @@ from aegis.mil_models.WIKGMIL import WiKG
 
 try:
     from aegis.mil_models.mambaMIL import MambaMIL, HAS_MAMBA_SSM
+
     HAS_MAMBA = HAS_MAMBA_SSM
 except ImportError:
     HAS_MAMBA = False

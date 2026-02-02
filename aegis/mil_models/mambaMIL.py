@@ -10,6 +10,7 @@ try:
     from aegis.mil_models.mamba_ssm.modules.bimamba import BiMamba
     from aegis.mil_models.mamba_ssm.modules.mamba_simple import Mamba
     from aegis.mil_models.mamba_ssm.modules.srmamba import SRMamba
+
     HAS_MAMBA_SSM = True
 except ImportError as e:
     print(f"Warning: mamba_ssm modules could not be imported: {e}")

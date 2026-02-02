@@ -53,12 +53,12 @@ def get_data_manager(
 
     if csv_path and not os.path.exists(csv_path):
         raise FileNotFoundError(f"Dataset CSV file not found: {csv_path}")
-    
+
     # Extract split CSVs from kwargs
     train_csv = kwargs.get("train_csv")
     val_csv = kwargs.get("val_csv")
     test_csv = kwargs.get("test_csv")
-    
+
     if not csv_path and not train_csv:
         raise ValueError("Either csv_path or train_csv must be provided.")
 

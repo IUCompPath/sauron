@@ -211,12 +211,16 @@ def main_experiment_runner(args: argparse.Namespace):
             "label_column": getattr(args, "label_col", "label"),
             "patient_id_col_name": getattr(args, "patient_id_col", "case_id"),
             "slide_id_col_name": getattr(args, "slide_id_col", "slide_id"),
-            "filter_criteria": json.loads(args.filter_criteria)
-            if hasattr(args, "filter_criteria") and args.filter_criteria
-            else None,
-            "ignore_labels": args.ignore_labels.split(",")
-            if hasattr(args, "ignore_labels") and args.ignore_labels
-            else None,
+            "filter_criteria": (
+                json.loads(args.filter_criteria)
+                if hasattr(args, "filter_criteria") and args.filter_criteria
+                else None
+            ),
+            "ignore_labels": (
+                args.ignore_labels.split(",")
+                if hasattr(args, "ignore_labels") and args.ignore_labels
+                else None
+            ),
             "patient_label_aggregation": getattr(
                 args,
                 "patient_label_aggregation",
@@ -226,9 +230,11 @@ def main_experiment_runner(args: argparse.Namespace):
             "time_column": getattr(args, "time_col", None),
             "event_column": getattr(args, "event_col", None),
             "n_bins": getattr(args, "n_bins_survival", 4),
-            "filter_dict": json.loads(args.filter_dict_survival)
-            if hasattr(args, "filter_dict_survival") and args.filter_dict_survival
-            else None,
+            "filter_dict": (
+                json.loads(args.filter_dict_survival)
+                if hasattr(args, "filter_dict_survival") and args.filter_dict_survival
+                else None
+            ),
             "omic_csv_path": getattr(args, "omic_csv", None),
             "omic_patient_id_col": getattr(args, "omic_patient_id_col", "case_id"),
             "apply_sig": getattr(args, "apply_sig_survival", False),
@@ -274,8 +280,8 @@ def main_experiment_runner(args: argparse.Namespace):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MIL Training")
     args = get_mil_args(parser)
-    args.backbone = 'clam_sb'
-    args.task_name = 'tcga_ot'
+    args.backbone = "clam_sb"
+    args.task_name = "tcga_ot"
 
     if not hasattr(args, "task_name"):
         args.task_name = args.task

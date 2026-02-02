@@ -287,7 +287,9 @@ class WSI:
         ):  # Attempt to get MPP from backend if not set by constructor
             try:
                 mpp_x = self._fetch_mpp(custom_mpp_keys)
-            except ValueError:  # If backend cannot provide MPP, then cannot infer magnification from MPP
+            except (
+                ValueError
+            ):  # If backend cannot provide MPP, then cannot infer magnification from MPP
                 mpp_x = None
         else:  # MPP already provided in constructor
             mpp_x = self.mpp
@@ -396,12 +398,17 @@ class WSI:
         segmentation_model.eval()
 
         # Special handling for classic segmenters like CLAM that operate on whole images
-        if type(segmentation_model).__name__.lower() in ["clamsegmenter", "classicsegmenter"]:
+        if type(segmentation_model).__name__.lower() in [
+            "clamsegmenter",
+            "classicsegmenter",
+        ]:
             from torchvision import transforms
 
             # These models expect a single downsampled image.
             # We'll create a thumbnail at a specific magnification suitable for them.
-            seg_mag = 1.25  # A low magnification like 1.25x is typical for classic methods
+            seg_mag = (
+                1.25  # A low magnification like 1.25x is typical for classic methods
+            )
             seg_mpp = 10 / seg_mag
             mpp_reduction_factor = self.mpp / seg_mpp
 
@@ -500,7 +507,7 @@ class WSI:
 
                     patch_pred = preds[i][: y_end - y_start, : x_end - x_start]
                     stitched_mask[y_start:y_end, x_start:x_end] += patch_pred
-            
+
             binary_mask_for_contours = (stitched_mask > 0).astype(np.uint8) * 255
 
         # Define save paths
@@ -517,10 +524,10 @@ class WSI:
         # Here, `contour_scale` is 1 / mpp_reduction_factor, converting coordinates from the `target_mag` resolution back to level 0 pixels.
         gdf_contours = mask_to_gdf(
             mask=binary_mask_for_contours,
-            max_nb_holes=0
-            if holes_are_tissue
-            else getattr(
-                segmentation_model, "max_holes_to_fill", 20
+            max_nb_holes=(
+                0
+                if holes_are_tissue
+                else getattr(segmentation_model, "max_holes_to_fill", 20)
             ),  # Use model's attribute or default
             min_contour_area=1000,  # Default: 1000. Area in pixels at the mask generation resolution
             pixel_size=self.mpp,  # Use original WSI MPP for consistency of area units (um^2)

@@ -373,9 +373,9 @@ class WSIPatcher:
                 self.patch_size_level,
                 self.patch_size_level,
             ),  # Size to read at that pyramid level
-            read_as="pil"
-            if self.pil
-            else "numpy",  # Request format based on `pil` flag
+            read_as=(
+                "pil" if self.pil else "numpy"
+            ),  # Request format based on `pil` flag
         )
 
         # Resize the patch to the final `self.patch_size_output` if necessary

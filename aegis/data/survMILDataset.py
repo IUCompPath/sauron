@@ -84,23 +84,29 @@ class SurvivalDataManager:
         elif train_csv is not None:
             try:
                 train_df = pd.read_csv(train_csv, low_memory=False)
-                self.train_patient_ids = train_df[self.patient_id_col_name].unique().tolist()
-                
+                self.train_patient_ids = (
+                    train_df[self.patient_id_col_name].unique().tolist()
+                )
+
                 dfs = [train_df]
                 if val_csv:
                     val_df = pd.read_csv(val_csv, low_memory=False)
-                    self.val_patient_ids = val_df[self.patient_id_col_name].unique().tolist()
+                    self.val_patient_ids = (
+                        val_df[self.patient_id_col_name].unique().tolist()
+                    )
                     dfs.append(val_df)
                 else:
                     self.val_patient_ids = []
-                    
+
                 if test_csv:
                     test_df = pd.read_csv(test_csv, low_memory=False)
-                    self.test_patient_ids = test_df[self.patient_id_col_name].unique().tolist()
+                    self.test_patient_ids = (
+                        test_df[self.patient_id_col_name].unique().tolist()
+                    )
                     dfs.append(test_df)
                 else:
                     self.test_patient_ids = []
-                
+
                 raw_data = pd.concat(dfs, ignore_index=True)
             except FileNotFoundError as e:
                 raise FileNotFoundError(f"One of the split CSV files not found") from e
@@ -158,11 +164,17 @@ class SurvivalDataManager:
 
         # If separate CSVs were provided, we need to filter patient IDs based on available data
         if csv_path is None and train_csv is not None:
-            available_patients = set(self.patient_df['case_id'].unique())
-            self.train_patient_ids = [pid for pid in self.train_patient_ids if pid in available_patients]
-            self.val_patient_ids = [pid for pid in self.val_patient_ids if pid in available_patients]
-            self.test_patient_ids = [pid for pid in self.test_patient_ids if pid in available_patients]
-            
+            available_patients = set(self.patient_df["case_id"].unique())
+            self.train_patient_ids = [
+                pid for pid in self.train_patient_ids if pid in available_patients
+            ]
+            self.val_patient_ids = [
+                pid for pid in self.val_patient_ids if pid in available_patients
+            ]
+            self.test_patient_ids = [
+                pid for pid in self.test_patient_ids if pid in available_patients
+            ]
+
             # We also need to set a dummy split generator or handle it so set_next_fold doesn't break
             # Or we can just rely on the fact that train_patient_ids are set.
             # But get_mil_datasets checks for train_patient_ids, so we are good.
@@ -473,15 +485,21 @@ class SurvivalDataManager:
         if self.train_patient_ids is not None:
             if self.verbose:
                 print("Splits already set from separate CSVs. Using fixed split.")
-            
+
             # Find indices of current split IDs in patient_df
-            train_indices = self.patient_df.index[self.patient_df['case_id'].isin(self.train_patient_ids)].tolist()
-            val_indices = self.patient_df.index[self.patient_df['case_id'].isin(self.val_patient_ids)].tolist()
-            test_indices = self.patient_df.index[self.patient_df['case_id'].isin(self.test_patient_ids)].tolist()
-            
+            train_indices = self.patient_df.index[
+                self.patient_df["case_id"].isin(self.train_patient_ids)
+            ].tolist()
+            val_indices = self.patient_df.index[
+                self.patient_df["case_id"].isin(self.val_patient_ids)
+            ].tolist()
+            test_indices = self.patient_df.index[
+                self.patient_df["case_id"].isin(self.test_patient_ids)
+            ].tolist()
+
             def dummy_gen():
                 yield (train_indices, val_indices, test_indices)
-            
+
             self.split_generator = dummy_gen()
             self.num_folds_generated = 1
             return
@@ -790,9 +808,9 @@ class SurvivalMILDataset(Dataset):
         self.patch_size = str(patch_size) if patch_size is not None else ""
         self.cache_enabled = cache_enabled
         self.n_subsamples = n_subsamples
-        self.path_features_cache: Dict[
-            str, torch.Tensor
-        ] = {}  # Cache for loaded slide features
+        self.path_features_cache: Dict[str, torch.Tensor] = (
+            {}
+        )  # Cache for loaded slide features
 
         self.omic_features = (
             omic_features_df_scaled  # Already selected and scaled for this split

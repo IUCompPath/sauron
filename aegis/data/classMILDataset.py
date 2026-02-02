@@ -85,25 +85,31 @@ class ClassificationDataManager:
             # Load separate CSVs
             try:
                 train_df = pd.read_csv(train_csv)
-                self.train_patient_ids = train_df[self.patient_id_col_name].unique().tolist()
-                
+                self.train_patient_ids = (
+                    train_df[self.patient_id_col_name].unique().tolist()
+                )
+
                 dfs = [train_df]
                 if val_csv:
                     val_df = pd.read_csv(val_csv)
-                    self.val_patient_ids = val_df[self.patient_id_col_name].unique().tolist()
+                    self.val_patient_ids = (
+                        val_df[self.patient_id_col_name].unique().tolist()
+                    )
                     dfs.append(val_df)
                 else:
                     self.val_patient_ids = []
-                    
+
                 if test_csv:
                     test_df = pd.read_csv(test_csv)
-                    self.test_patient_ids = test_df[self.patient_id_col_name].unique().tolist()
+                    self.test_patient_ids = (
+                        test_df[self.patient_id_col_name].unique().tolist()
+                    )
                     dfs.append(test_df)
                 else:
                     self.test_patient_ids = []
-                
+
                 raw_slide_data = pd.concat(dfs, ignore_index=True)
-                
+
             except FileNotFoundError as e:
                 raise FileNotFoundError(f"One of the split CSV files not found") from e
         else:
@@ -133,18 +139,22 @@ class ClassificationDataManager:
         if self.site_column:
             if self.site_column not in self.slide_data.columns:
                 raise ValueError(f"Site column '{self.site_column}' not found in CSV.")
-            
+
             # Create site mapping
-            unique_sites = sorted(self.slide_data[self.site_column].astype(str).unique())
+            unique_sites = sorted(
+                self.slide_data[self.site_column].astype(str).unique()
+            )
             self.site_mapping = {site: i for i, site in enumerate(unique_sites)}
-            
+
             # Map sites to integers
-            self.slide_data["site_id"] = self.slide_data[self.site_column].astype(str).map(self.site_mapping)
+            self.slide_data["site_id"] = (
+                self.slide_data[self.site_column].astype(str).map(self.site_mapping)
+            )
             # Handle potential NaNs if any (though we built map from unique values)
             if self.slide_data["site_id"].isnull().any():
-                 raise ValueError("NaN values found in site column mapping.")
+                raise ValueError("NaN values found in site column mapping.")
             self.slide_data["site_id"] = self.slide_data["site_id"].astype(int)
-            
+
             if verbose:
                 print(f"Inferred site_mapping: {self.site_mapping}")
                 print(f"Number of sites: {len(self.site_mapping)}")
@@ -171,18 +181,30 @@ class ClassificationDataManager:
         if csv_path is None and train_csv is not None:
             # Re-derive indices based on patient IDs (which we stored) and the processed slide_data
             # Note: slide_data might have been filtered, so we need to be careful
-            
+
             # Update patient IDs based on what remains in slide_data
-            available_patients = set(self.slide_data['case_id'].unique())
-            
-            self.train_patient_ids = [pid for pid in self.train_patient_ids if pid in available_patients]
-            self.val_patient_ids = [pid for pid in self.val_patient_ids if pid in available_patients]
-            self.test_patient_ids = [pid for pid in self.test_patient_ids if pid in available_patients]
-            
-            self.train_slide_indices = self.slide_data[self.slide_data['case_id'].isin(self.train_patient_ids)].index.tolist()
-            self.val_slide_indices = self.slide_data[self.slide_data['case_id'].isin(self.val_patient_ids)].index.tolist()
-            self.test_slide_indices = self.slide_data[self.slide_data['case_id'].isin(self.test_patient_ids)].index.tolist()
-            
+            available_patients = set(self.slide_data["case_id"].unique())
+
+            self.train_patient_ids = [
+                pid for pid in self.train_patient_ids if pid in available_patients
+            ]
+            self.val_patient_ids = [
+                pid for pid in self.val_patient_ids if pid in available_patients
+            ]
+            self.test_patient_ids = [
+                pid for pid in self.test_patient_ids if pid in available_patients
+            ]
+
+            self.train_slide_indices = self.slide_data[
+                self.slide_data["case_id"].isin(self.train_patient_ids)
+            ].index.tolist()
+            self.val_slide_indices = self.slide_data[
+                self.slide_data["case_id"].isin(self.val_patient_ids)
+            ].index.tolist()
+            self.test_slide_indices = self.slide_data[
+                self.slide_data["case_id"].isin(self.test_patient_ids)
+            ].index.tolist()
+
             # Create a dummy kfold_splits to make set_current_fold work or just set it directly
             # Since we have fixed splits, we can treat it as a single fold
             self.kfold_splits = [(self.train_patient_ids, self.val_patient_ids)]
@@ -351,7 +373,9 @@ class ClassificationDataManager:
     ) -> None:
         if self.kfold_splits is not None:
             if self.verbose:
-                print("Splits already set (e.g. from separate CSVs or loaded). Skipping creation.")
+                print(
+                    "Splits already set (e.g. from separate CSVs or loaded). Skipping creation."
+                )
             return
 
         if self.patient_data.empty:
@@ -586,10 +610,10 @@ class ClassificationDataManager:
                 "cache_enabled": cache_enabled,
                 "site_column": "site_id" if self.site_column else None,
             }
-            
+
             train_params = common_params.copy()
             train_params["n_subsamples"] = n_subsamples
-            
+
             eval_params = common_params.copy()
             eval_params["n_subsamples"] = -1
 
@@ -709,7 +733,7 @@ class WSIMILDataset(Dataset):
         use_hdf5: bool = False,
         cache_enabled: bool = False,
         n_subsamples: int = -1,  # Number of patches to sample per bag (-1 means use all)
-        site_column: Optional[str] = None, # Column name for site ID in slide_data_df
+        site_column: Optional[str] = None,  # Column name for site ID in slide_data_df
     ):
         self.slide_data = slide_data_df  # DataFrame for this specific split
         self.data_directory = data_directory
@@ -740,7 +764,7 @@ class WSIMILDataset(Dataset):
         slide_id = row["slide_id"]
         slide_id = row["slide_id"]
         label = row["label"]  # Assumes 'label' is already integer mapped
-        
+
         site_id = None
         if self.site_column:
             site_id = row[self.site_column]
@@ -807,7 +831,7 @@ class WSIMILDataset(Dataset):
 
             # Sample patches if n_subsamples is specified and bag is larger
             features = self._sample_patches(features)
-            
+
             if self.site_column:
                 return features, label, site_id
             return features, label
@@ -821,9 +845,9 @@ class WSIMILDataset(Dataset):
                             oldest_file = next(iter(_worker_hdf5_cache))
                             _worker_hdf5_cache[oldest_file].close()
                             del _worker_hdf5_cache[oldest_file]
-                        
+
                         _worker_hdf5_cache[file_path] = h5py.File(file_path, "r")
-                    
+
                     hdf5_file = _worker_hdf5_cache[file_path]
 
                 features_dset = hdf5_file["features"]

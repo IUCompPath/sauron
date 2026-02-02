@@ -152,13 +152,13 @@ class Processor:
         self.search_nested = search_nested
 
         # Validate extensions
-        assert isinstance(self.wsi_ext, list), (
-            f"wsi_ext must be a list, got {type(self.wsi_ext)}"
-        )
+        assert isinstance(
+            self.wsi_ext, list
+        ), f"wsi_ext must be a list, got {type(self.wsi_ext)}"
         for ext in self.wsi_ext:
-            assert ext.startswith("."), (
-                f"Invalid extension: {ext} (must start with a period)"
-            )
+            assert ext.startswith(
+                "."
+            ), f"Invalid extension: {ext} (must start with a period)"
 
         # === Collect slide paths and relative paths ===
         full_paths, rel_paths, mpp_values_from_csv = collect_valid_slides(
@@ -211,9 +211,11 @@ class Processor:
                     name=name,  # Base filename for output file naming
                     tissue_seg_path=tissue_seg_path,
                     custom_mpp_keys=self.custom_mpp_keys,
-                    mpp=mpp_values_from_csv[wsi_idx]
-                    if mpp_values_from_csv is not None
-                    else None,
+                    mpp=(
+                        mpp_values_from_csv[wsi_idx]
+                        if mpp_values_from_csv is not None
+                        else None
+                    ),
                     max_workers=self.max_workers,
                     reader_type=self.reader_type,
                     lazy_init=True,

@@ -387,9 +387,9 @@ def get_patch_size_in_microns(
     return_patch_size = [0, 0]
     patch_size = None
 
-    assert isinstance(patch_size_from_config, (str, list, tuple)), (
-        "Patch size must be a list or string."
-    )
+    assert isinstance(
+        patch_size_from_config, (str, list, tuple)
+    ), "Patch size must be a list or string."
 
     if isinstance(patch_size_from_config, str):
         # first remove all spaces and square brackets
@@ -404,9 +404,9 @@ def get_patch_size_in_microns(
             patch_size = patch_size_from_config.split("X")
         if len(patch_size) == 1:
             patch_size = patch_size_from_config.split("*")
-        assert len(patch_size) == 2, (
-            "Could not parse patch size from config.yml, use either ',', 'x', 'X', or '*' as separator between x and y dimensions."
-        )
+        assert (
+            len(patch_size) == 2
+        ), "Could not parse patch size from config.yml, use either ',', 'x', 'X', or '*' as separator between x and y dimensions."
     elif isinstance(patch_size_from_config, list) or isinstance(
         patch_size_from_config, tuple
     ):

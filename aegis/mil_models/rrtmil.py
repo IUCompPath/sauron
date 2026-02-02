@@ -733,7 +733,9 @@ class CrossRegionAttntion(nn.Module):
         )  # nW, sW, region_size*region_size, C
         attn_regions = torch.einsum(
             "w n p c, w n p -> w n p c", attn_regions, dispatch_weights
-        ).sum(dim=1)  # nW, region_size*region_size, C
+        ).sum(
+            dim=1
+        )  # nW, region_size*region_size, C
 
         # merge regions
         attn_regions = attn_regions.view(-1, region_size, region_size, C)
@@ -1041,7 +1043,7 @@ class RRT(BaseMILModel):
             input_dim = in_dim
         if dropout_rate is not None:
             dropout = dropout_rate
-        
+
         super().__init__(in_dim=input_dim, n_classes=n_classes, is_survival=is_survival)
 
         self.patch_to_emb = [nn.Linear(input_dim, 512)]
@@ -1095,20 +1097,20 @@ class RRT(BaseMILModel):
     def _forward_impl(self, x: torch.Tensor):
         # x: (batch_size, num_instances, in_dim) - already normalized by base class
         batch_size, num_instances, _ = x.shape
-        
+
         # Flatten for processing: (batch_size * num_instances, in_dim)
         x_flat = x.view(-1, x.shape[-1])
-        
+
         # Process through model
         x_emb = self.patch_to_emb(x_flat)  # (B*N, 512)
         x_emb = self.dp(x_emb)
-        
+
         # Feature re-embedding
         x_encoded = self.online_encoder(x_emb)  # (B*N, final_dim)
-        
+
         # Reshape back to batch structure: (batch_size, num_instances, final_dim)
         x_encoded = x_encoded.view(batch_size, num_instances, -1)
-        
+
         # Feature aggregation - process each bag
         bag_reprs = []
         for b in range(batch_size):
@@ -1116,22 +1118,26 @@ class RRT(BaseMILModel):
             # Pool function expects (N, final_dim) -> (1, final_dim) or (final_dim,)
             if isinstance(self.pool_fn, nn.AdaptiveAvgPool1d):
                 # For AdaptiveAvgPool1d, need to transpose: (N, D) -> (D, N) -> (D, 1) -> (D,)
-                bag_repr = self.pool_fn(bag_features.transpose(0, 1).unsqueeze(0)).squeeze(-1).squeeze(0)
+                bag_repr = (
+                    self.pool_fn(bag_features.transpose(0, 1).unsqueeze(0))
+                    .squeeze(-1)
+                    .squeeze(0)
+                )
             else:
                 # For DAttention, expects (N, D) -> (1, D) -> (D,)
                 bag_repr = self.pool_fn(bag_features).squeeze(0)
             bag_reprs.append(bag_repr)
-        
+
         # Stack: (batch_size, final_dim)
         bag_reprs = torch.stack(bag_reprs)
-        
+
         # Prediction
         logits = self.predictor(bag_reprs)  # (batch_size, n_classes)
-        
+
         # RRT originally returns (hazards, S) for survival
         # Base class will standardize this
         hazards = torch.sigmoid(logits)
         survival_curves = torch.cumprod(1 - hazards, dim=1)
-        
+
         # Return in standard format - base class will handle standardization
         return hazards, survival_curves

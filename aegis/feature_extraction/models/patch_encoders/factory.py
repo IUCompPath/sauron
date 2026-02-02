@@ -401,9 +401,9 @@ class CTransPathInferenceEncoder(BasePatchEncoder):
             key: val for key, val in state_dict.items() if "attn_mask" not in key
         }
         missing, unexpected = model.load_state_dict(state_dict, strict=False)
-        assert len(unexpected) == 0, (
-            f"Unexpected keys found in state dict: {unexpected}"
-        )
+        assert (
+            len(unexpected) == 0
+        ), f"Unexpected keys found in state dict: {unexpected}"
         assert missing == [
             "layers.0.blocks.1.attn_mask",
             "layers.1.blocks.1.attn_mask",

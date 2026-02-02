@@ -17,7 +17,24 @@ class BaseMILModel(nn.Module):
     - Input handling (supports both 2D and 3D inputs)
     - Output format (standardized tuple)
     - Batch size support (automatic handling)
-    - Optional metadata sub-network fused after bag representation
+    - Multi-modal metadata fusion
+
+    Metadata Fusion Strategy:
+    -------------------------
+    This class implements a robust "Concatenation + Projection" strategy for fusing
+    slide-level metadata (e.g., age, site code) with the bag representation.
+    
+    Old behavior (deprecated): bag_rep + encoded_metadata
+    New behavior (v2): fusion_net(concat([bag_rep, encoded_metadata]))
+
+    Why this is better:
+    1. Modality Integrity: Concatenation prevents metadata from "washing out" or corrupting
+       subtle image features, which can happen with simple addition.
+    2. Maskability: The system is designed to be "maskable". If metadata is missing (None),
+       a zero-vector is used. The subsequent LayerNorm in `fusion_net` ensures the
+       distribution remains stable, allowing the model to perform well even with missing data.
+    3. Learnable Mixing: The projection layer allows the model to learn exactly how much
+       weight to assign to the metadata features versus the image features.
 
     All MIL models should inherit from this class and implement:
     - `_forward_impl(self, x: torch.Tensor, metadata: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, ...]`
@@ -65,11 +82,19 @@ class BaseMILModel(nn.Module):
                 nn.ReLU(inplace=True),
                 nn.Linear(self.metadata_fusion_dim, self.metadata_fusion_dim),
             )
+            # Fusion net to combine bag representation and encoded metadata
+            # Projects back to in_dim to maintain compatibility with existing classifiers
+            self.fusion_net = nn.Sequential(
+                nn.Linear(in_dim + self.metadata_fusion_dim, in_dim),
+                nn.ReLU(inplace=True),
+                nn.LayerNorm(in_dim),
+            )
             self.metadata_to_logits = nn.Linear(
                 self.metadata_fusion_dim, n_classes
             )  # for models that fuse at logits (e.g. Mean/Max MIL)
         else:
             self.metadata_encoder = None
+            self.fusion_net = None
             self.metadata_to_logits = None
 
     def _normalize_input(self, x) -> Tuple[torch.Tensor, int]:
@@ -109,18 +134,28 @@ class BaseMILModel(nn.Module):
     ) -> torch.Tensor:
         """
         Fuse encoded metadata with bag representation (before classifier).
-        Use when the model has a single bag vector of shape (B, metadata_fusion_dim).
+        Uses concatenation followed by projection to preserve information from both modalities.
 
         Args:
-            bag_rep: (batch_size, metadata_fusion_dim)
+            bag_rep: (batch_size, in_dim)
             metadata: (batch_size, metadata_dim) or None
 
         Returns:
-            bag_rep unchanged if no metadata, else bag_rep + metadata_encoder(metadata)
+            bag_rep (normalized) if no metadata, else fusion_net(concat([bag_rep, encoded_metadata]))
         """
-        if metadata is None or self.metadata_encoder is None:
+        if self.metadata_encoder is None:
             return bag_rep
-        return bag_rep + self.metadata_encoder(metadata)
+
+        if metadata is None:
+            # Masked/Missing metadata: use zeros to maintain consistent distribution
+            metadata_encoded = torch.zeros(
+                bag_rep.shape[0], self.metadata_fusion_dim, device=bag_rep.device
+            )
+        else:
+            metadata_encoded = self.metadata_encoder(metadata)
+
+        fused = torch.cat([bag_rep, metadata_encoded], dim=-1)
+        return self.fusion_net(fused)
 
     def _fuse_metadata_logits(
         self,
@@ -128,8 +163,8 @@ class BaseMILModel(nn.Module):
         metadata: Optional[torch.Tensor],
     ) -> torch.Tensor:
         """
-        Fuse encoded metadata at logits level (for models without a single bag_rep, e.g. Mean/Max MIL).
-        Use when the model outputs bag-level logits directly of shape (B, n_classes).
+        Fuse encoded metadata at logits level (for models without a single bag_rep).
+        Uses addition at the logits level as a late-stage bias.
 
         Args:
             bag_logits: (batch_size, n_classes)

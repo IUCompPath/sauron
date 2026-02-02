@@ -1,9 +1,10 @@
 import math
+from typing import Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from einops import rearrange, repeat
+from einops import repeat
 
 from aegis.utils.generic_utils import initialize_weights
 
@@ -194,8 +195,18 @@ class S4Model(BaseMILModel):  # S4MIL Wrapper
         dropout_rate: float = 0.0,  # Dropout for FC and S4D
         activation: str = "gelu",  # Activation for FC
         is_survival: bool = False,
+        metadata_dim: int = 0,
+        metadata_fusion_dim: Optional[int] = None,
+        **kwargs,
     ):
-        super().__init__(in_dim=in_dim, n_classes=n_classes, is_survival=is_survival)
+        super().__init__(
+            in_dim=in_dim,
+            n_classes=n_classes,
+            is_survival=is_survival,
+            metadata_dim=metadata_dim,
+            metadata_fusion_dim=metadata_fusion_dim or embed_dim,
+            **kwargs,
+        )
 
         fc1_layers = [nn.Linear(in_dim, embed_dim)]
         fc1_layers.append(get_activation_fn(activation))
@@ -218,7 +229,7 @@ class S4Model(BaseMILModel):  # S4MIL Wrapper
         self.classifier = nn.Linear(embed_dim, n_classes)
         self.apply(initialize_weights)
 
-    def _forward_impl(self, x: torch.Tensor):
+    def _forward_impl(self, x: torch.Tensor, metadata: Optional[torch.Tensor] = None):
         # x: (batch_size, num_instances, in_dim) - already normalized by base class
 
         # Instance feature extraction
@@ -233,6 +244,7 @@ class S4Model(BaseMILModel):  # S4MIL Wrapper
 
         # Max pooling over instances (sequence dimension)
         bag_representation, _ = torch.max(s4_output, dim=1)  # (batch_size, embed_dim)
+        bag_representation = self._fuse_metadata(bag_representation, metadata)
 
         logits = self.classifier(bag_representation)  # (batch_size, n_classes)
 

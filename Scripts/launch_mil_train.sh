@@ -14,6 +14,15 @@ DATA_ROOT_DIR="/path/to/your/datasets/TCGA-BRCA" # Change to your data root
 RESULTS_DIR="./experiments/training_results"
 SPLITS_DIR_BASE="./splits" # Base directory for split files
 
+# CSV column names (must match your dataset CSV)
+LABEL_COL="label"           # e.g. "OncoTreeCode" for TCGA-OT, "label" otherwise
+PATIENT_ID_COL="case_id"
+SLIDE_ID_COL="slide_id"
+
+# Multi-modal metadata (classification): comma-separated CSV columns fused as extra modality
+# e.g. "OncoTreeSiteCode" or "OncoTreeSiteCode,sex" (leave empty to disable)
+METADATA_COLS=""
+
 # Model Configuration
 MODEL_TYPE='att_mil' # 'att_mil', 'trans_mil', 'mamba_mil', etc.
 BACKBONE='titan'    # 'resnet50', 'plip'
@@ -64,6 +73,10 @@ ARGS+=(
     "--mambamil_type" "$MAMBA_TYPE"
     "--mambamil_layer" "$MAMBA_LAYERS"
     "--mambamil_rate" "$MAMBA_RATE"
+    # CSV column names
+    "--label_col" "$LABEL_COL"
+    "--patient_id_col" "$PATIENT_ID_COL"
+    "--slide_id_col" "$SLIDE_ID_COL"
     # Specify paths to your data files
     "--dataset_csv" "/path/to/your/${TASK_NAME}.csv"
     "--split_dir" "${SPLITS_DIR_BASE}/${TASK_NAME}_kfold" # Example split dir name
@@ -75,6 +88,11 @@ if [ "$TASK_TYPE" = "survival" ]; then
         "--bag_loss" "nll_surv"
         "--alpha_surv" "0.5"
     )
+fi
+
+# Multi-modal: add metadata columns for classification (e.g. OncoTreeSiteCode)
+if [ -n "${METADATA_COLS:-}" ]; then
+    ARGS+=("--metadata_cols" "$METADATA_COLS")
 fi
 
 echo "========================================================================"

@@ -1,6 +1,5 @@
 import pytorch_lightning as pl
 import torch
-import torch.nn as nn
 import torchmetrics
 from sksurv.metrics import concordance_index_censored
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -90,7 +89,8 @@ class aegis(pl.LightningModule):
 
         if self.args.task_type.lower() == "classification":
             data, label = batch[0], batch[1]
-            logits, probs, preds, _, _ = self.model(data)
+            metadata = batch[2] if len(batch) >= 3 else None
+            logits, probs, preds, _, _ = self.model(data, metadata=metadata)
             loss = self.loss_fn(logits, label)
 
             results.update({"loss": loss, "probs": probs, "label": label})

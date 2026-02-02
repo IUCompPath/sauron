@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -61,8 +63,18 @@ class DAttention(
         dropout_rate: float = 0.25,
         activation: str = "relu",
         is_survival: bool = False,
+        metadata_dim: int = 0,
+        metadata_fusion_dim: Optional[int] = None,
+        **kwargs,
     ):
-        super().__init__(in_dim=in_dim, n_classes=n_classes, is_survival=is_survival)
+        super().__init__(
+            in_dim=in_dim,
+            n_classes=n_classes,
+            is_survival=is_survival,
+            metadata_dim=metadata_dim,
+            metadata_fusion_dim=metadata_fusion_dim or 512,
+            **kwargs,
+        )
         self.embed_dim = 512  # L
         self.attention_hidden_dim = 512  # D
         self.num_attention_outputs = 1  # K
@@ -83,7 +95,11 @@ class DAttention(
         )
         self.apply(initialize_weights)
 
-    def _forward_impl(self, input_tensor: torch.Tensor):
+    def _forward_impl(
+        self,
+        input_tensor: torch.Tensor,
+        metadata: Optional[torch.Tensor] = None,
+    ):
         # input_tensor: (batch_size, num_instances, in_dim) - already normalized by base class
         batch_size = input_tensor.shape[0]
 
@@ -124,6 +140,9 @@ class DAttention(
         # If K=1, aggregated_features is (batch_size, 1, embed_dim)
         # Flatten for classifier: (batch_size, K * embed_dim)
         aggregated_features_flat = aggregated_features.view(batch_size, -1)
+        aggregated_features_flat = self._fuse_metadata(
+            aggregated_features_flat, metadata
+        )
 
         logits = self.classifier(aggregated_features_flat)  # (batch_size, n_classes)
 

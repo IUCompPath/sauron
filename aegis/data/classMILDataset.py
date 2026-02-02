@@ -44,7 +44,10 @@ class ClassificationDataManager:
         train_csv: Optional[str] = None,
         val_csv: Optional[str] = None,
         test_csv: Optional[str] = None,
-        site_column: Optional[str] = None,  # Column name for site information
+        site_column: Optional[str] = None,  # Column name for site information (legacy)
+        metadata_columns: Optional[
+            List[str]
+        ] = None,  # Columns as extra modalities (e.g. OncoTreeSiteCode)
     ):
         self.csv_path = csv_path
         self.train_csv = train_csv
@@ -63,6 +66,10 @@ class ClassificationDataManager:
         self.split_dir = split_dir
         self.site_column = site_column
         self.site_mapping: Dict[str, int] = {}
+        self.metadata_columns = list(metadata_columns) if metadata_columns else []
+        self.metadata_mappings: Dict[str, Dict[str, int]] = {}
+        self.metadata_dims: List[int] = []
+        self.metadata_dim: int = 0
 
         self.train_patient_ids: Optional[List[str]] = None
         self.val_patient_ids: Optional[List[str]] = None
@@ -111,7 +118,7 @@ class ClassificationDataManager:
                 raw_slide_data = pd.concat(dfs, ignore_index=True)
 
             except FileNotFoundError as e:
-                raise FileNotFoundError(f"One of the split CSV files not found") from e
+                raise FileNotFoundError("One of the split CSV files not found") from e
         else:
             raise ValueError("Either csv_path or train_csv must be provided.")
 
@@ -158,6 +165,30 @@ class ClassificationDataManager:
             if verbose:
                 print(f"Inferred site_mapping: {self.site_mapping}")
                 print(f"Number of sites: {len(self.site_mapping)}")
+
+        # Build metadata column encodings for multi-modal (e.g. OncoTreeSiteCode)
+        for col in self.metadata_columns:
+            if col not in self.slide_data.columns:
+                raise ValueError(
+                    f"Metadata column '{col}' not found in CSV. Available: {list(self.slide_data.columns)}"
+                )
+            unique_vals = sorted(self.slide_data[col].astype(str).unique().tolist())
+            self.metadata_mappings[col] = {v: i for i, v in enumerate(unique_vals)}
+            self.metadata_dims.append(len(unique_vals))
+            enc_col = f"_meta_enc_{col}"
+            self.slide_data[enc_col] = (
+                self.slide_data[col].astype(str).map(self.metadata_mappings[col])
+            )
+            if self.slide_data[enc_col].isnull().any():
+                raise ValueError(
+                    f"NaN after mapping metadata column '{col}'. Check for unseen values."
+                )
+            self.slide_data[enc_col] = self.slide_data[enc_col].astype(int)
+        self.metadata_dim = sum(self.metadata_dims)
+        if self.metadata_dim and verbose:
+            print(
+                f"Metadata columns: {self.metadata_columns}, dims per col: {self.metadata_dims}, total metadata_dim: {self.metadata_dim}"
+            )
 
         self.num_classes = len(set(self.label_mapping.values()))
         if self.num_classes == 0 and len(self.slide_data) > 0:
@@ -609,6 +640,9 @@ class ClassificationDataManager:
                 "use_hdf5": use_hdf5,
                 "cache_enabled": cache_enabled,
                 "site_column": "site_id" if self.site_column else None,
+                "metadata_columns": self.metadata_columns,
+                "metadata_mappings": self.metadata_mappings,
+                "metadata_dims": self.metadata_dims,
             }
 
             train_params = common_params.copy()
@@ -734,6 +768,9 @@ class WSIMILDataset(Dataset):
         cache_enabled: bool = False,
         n_subsamples: int = -1,  # Number of patches to sample per bag (-1 means use all)
         site_column: Optional[str] = None,  # Column name for site ID in slide_data_df
+        metadata_columns: Optional[List[str]] = None,
+        metadata_mappings: Optional[Dict[str, Dict[str, int]]] = None,
+        metadata_dims: Optional[List[int]] = None,
     ):
         self.slide_data = slide_data_df  # DataFrame for this specific split
         self.data_directory = data_directory
@@ -746,6 +783,10 @@ class WSIMILDataset(Dataset):
         self.cache_enabled = cache_enabled
         self.n_subsamples = n_subsamples
         self.site_column = site_column
+        self.metadata_columns = metadata_columns or []
+        self.metadata_mappings = metadata_mappings or {}
+        self.metadata_dims = metadata_dims or []
+        self.metadata_dim = sum(self.metadata_dims)
         self.data_cache: Dict[str, torch.Tensor] = {}
         self.verbose = True  # Add verbose flag if not present
 
@@ -762,12 +803,23 @@ class WSIMILDataset(Dataset):
     ) -> Union[Tuple[torch.Tensor, int], Tuple[torch.Tensor, int, np.ndarray]]:
         row = self.slide_data.iloc[idx]
         slide_id = row["slide_id"]
-        slide_id = row["slide_id"]
         label = row["label"]  # Assumes 'label' is already integer mapped
 
         site_id = None
         if self.site_column:
             site_id = row[self.site_column]
+
+        # Build metadata vector (one-hot per column, concatenated) for multi-modal
+        metadata_tensor = None
+        if self.metadata_dim > 0:
+            parts = []
+            for i, col in enumerate(self.metadata_columns):
+                enc_col = f"_meta_enc_{col}"
+                idx = int(row[enc_col])
+                one_hot = torch.zeros(self.metadata_dims[i], dtype=torch.float32)
+                one_hot[idx] = 1.0
+                parts.append(one_hot)
+            metadata_tensor = torch.cat(parts)
 
         current_data_dir_path: str
         if isinstance(self.data_directory, dict):
@@ -832,6 +884,8 @@ class WSIMILDataset(Dataset):
             # Sample patches if n_subsamples is specified and bag is larger
             features = self._sample_patches(features)
 
+            if metadata_tensor is not None:
+                return features, label, metadata_tensor
             if self.site_column:
                 return features, label, site_id
             return features, label
@@ -863,10 +917,14 @@ class WSIMILDataset(Dataset):
                 if "coords" in hdf5_file:
                     coords_dset = hdf5_file["coords"]
                     coordinates = coords_dset[indices]
+                    if metadata_tensor is not None:
+                        return features, label, metadata_tensor  # 3-tuple for collate
                     if self.site_column:
                         return features, label, coordinates, site_id
                     return features, label, coordinates
                 else:
+                    if metadata_tensor is not None:
+                        return features, label, metadata_tensor
                     if self.site_column:
                         return features, label, site_id
                     return features, label

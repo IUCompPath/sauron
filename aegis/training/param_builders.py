@@ -112,6 +112,12 @@ class DataManagerParamsBuilder:
     @staticmethod
     def _build_classification_params(args: argparse.Namespace) -> Dict[str, Any]:
         """Build classification-specific parameters."""
+        metadata_cols = safe_getattr(args, "metadata_cols", None)
+        metadata_columns = (
+            [c.strip() for c in metadata_cols.split(",") if c.strip()]
+            if metadata_cols
+            else None
+        )
         return {
             "label_column": safe_getattr(args, "label_col", "label"),
             "patient_id_col_name": safe_getattr(args, "patient_id_col", "case_id"),
@@ -123,6 +129,7 @@ class DataManagerParamsBuilder:
             ),
             "shuffle": safe_getattr(args, "shuffle_data", False),
             "split_dir": safe_getattr(args, "split_dir", None),
+            "metadata_columns": metadata_columns,
         }
 
     @staticmethod

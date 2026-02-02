@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -25,8 +25,18 @@ class WiKG(BaseMILModel):
         dropout_rate: float = 0.3,
         activation: str = "leaky_relu",  # Original used LeakyReLU
         is_survival: bool = False,
+        metadata_dim: int = 0,
+        metadata_fusion_dim: Optional[int] = None,
+        **kwargs,
     ):
-        super().__init__(in_dim=in_dim, n_classes=n_classes, is_survival=is_survival)
+        super().__init__(
+            in_dim=in_dim,
+            n_classes=n_classes,
+            is_survival=is_survival,
+            metadata_dim=metadata_dim,
+            metadata_fusion_dim=metadata_fusion_dim or hidden_dim,
+            **kwargs,
+        )
 
         # Using LeakyReLU as per original if specified, else map via get_activation_fn
         if activation.lower() == "leaky_relu":
@@ -180,6 +190,7 @@ class WiKG(BaseMILModel):
 
         bag_representation = self.readout(h_reshaped, batch=batch_vector)  # (B, C_h)
         bag_representation = self.output_norm(bag_representation)
+        bag_representation = self._fuse_metadata(bag_representation, metadata)
         logits = self.classifier_fc(bag_representation)  # (B, n_classes)
 
         # Predictions

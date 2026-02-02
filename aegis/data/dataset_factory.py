@@ -78,6 +78,7 @@ def get_data_manager(
                 "patient_stratification", False
             ),  # Legacy, not directly used by DM for len
             "patient_label_aggregation": kwargs.get("patient_label_aggregation", "max"),
+            "metadata_columns": kwargs.get("metadata_columns"),
         }
         return ClassificationDataManager(
             csv_path=csv_path,

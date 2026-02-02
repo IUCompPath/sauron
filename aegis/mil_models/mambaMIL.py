@@ -48,6 +48,9 @@ class MambaMIL(BaseMILModel):
         layer=2,
         rate=10,
         type="SRMamba",
+        metadata_dim=0,
+        metadata_fusion_dim=None,
+        **kwargs,
     ):
         # Map backward compatibility parameters
         if dropout is not None:
@@ -63,7 +66,14 @@ class MambaMIL(BaseMILModel):
                 "Please install mamba-ssm and causal-conv1d."
             )
 
-        super().__init__(in_dim=in_dim, n_classes=n_classes, is_survival=is_survival)
+        super().__init__(
+            in_dim=in_dim,
+            n_classes=n_classes,
+            is_survival=is_survival,
+            metadata_dim=metadata_dim,
+            metadata_fusion_dim=metadata_fusion_dim or 512,
+            **kwargs,
+        )
 
         self._fc1 = [nn.Linear(in_dim, 512)]
         if activation.lower() == "relu":
@@ -153,6 +163,7 @@ class MambaMIL(BaseMILModel):
         A = F.softmax(A, dim=-1)  # [B, 1, n]
         h = torch.bmm(A, h)  # [B, 1, 512]
         h = h.squeeze(1)  # [B, 512] - squeeze the attention dimension, not batch
+        h = self._fuse_metadata(h, metadata)
 
         logits = self.classifier(h)  # [B, n_classes]
 

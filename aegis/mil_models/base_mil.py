@@ -1,12 +1,14 @@
 """
 Base wrapper class for all MIL models.
 Provides standardized input/output handling and batch size support.
+Supports optional multi-modal metadata (e.g. OncoTreeSiteCode) via a sub-network
+fused in the later parts of the model (after bag representation).
 """
+
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from typing import Tuple, Optional, Dict, Any
 
 
 class BaseMILModel(nn.Module):
@@ -15,22 +17,28 @@ class BaseMILModel(nn.Module):
     - Input handling (supports both 2D and 3D inputs)
     - Output format (standardized tuple)
     - Batch size support (automatic handling)
+    - Optional metadata sub-network fused after bag representation
 
     All MIL models should inherit from this class and implement:
-    - `_forward_impl(self, x: torch.Tensor) -> Tuple[torch.Tensor, ...]`
+    - `_forward_impl(self, x: torch.Tensor, metadata: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, ...]`
 
     The `_forward_impl` method should return a tuple with:
     - For classification: (logits, probabilities, predictions, attention_scores, metadata)
     - For survival: (hazards, survival_curves, predictions, attention_scores, metadata)
 
-    The base class will handle:
-    - Input normalization (2D -> 3D)
-    - Output standardization
-    - Batch size handling
+    When metadata is provided, subclasses should call `_fuse_metadata(bag_rep, metadata)`
+    before the classifier (for models with a bag representation), or
+    `_fuse_metadata_logits(bag_logits, metadata)` for models that output bag-level logits directly.
     """
 
     def __init__(
-        self, in_dim: int, n_classes: int, is_survival: bool = False, **kwargs
+        self,
+        in_dim: int,
+        n_classes: int,
+        is_survival: bool = False,
+        metadata_dim: int = 0,
+        metadata_fusion_dim: Optional[int] = None,
+        **kwargs,
     ):
         """
         Initialize the base MIL model.
@@ -39,12 +47,30 @@ class BaseMILModel(nn.Module):
             in_dim: Input feature dimension
             n_classes: Number of output classes
             is_survival: Whether this is a survival analysis task
+            metadata_dim: If > 0, build a metadata sub-network and fuse in later parts
+            metadata_fusion_dim: Output dim of metadata encoder (must match bag_rep dim for
+                _fuse_metadata; also used for _fuse_metadata_logits). Defaults to in_dim.
             **kwargs: Additional arguments (passed to subclasses)
         """
         super().__init__()
         self.in_dim = in_dim
         self.n_classes = n_classes
         self.is_survival = is_survival
+        self.metadata_dim = metadata_dim
+        self.metadata_fusion_dim = metadata_fusion_dim or in_dim
+
+        if metadata_dim > 0:
+            self.metadata_encoder = nn.Sequential(
+                nn.Linear(metadata_dim, self.metadata_fusion_dim),
+                nn.ReLU(inplace=True),
+                nn.Linear(self.metadata_fusion_dim, self.metadata_fusion_dim),
+            )
+            self.metadata_to_logits = nn.Linear(
+                self.metadata_fusion_dim, n_classes
+            )  # for models that fuse at logits (e.g. Mean/Max MIL)
+        else:
+            self.metadata_encoder = None
+            self.metadata_to_logits = None
 
     def _normalize_input(self, x) -> Tuple[torch.Tensor, int]:
         """
@@ -72,10 +98,49 @@ class BaseMILModel(nn.Module):
             batch_size = x.shape[0]
         else:
             raise ValueError(
-                f"Expected input tensor to be 2D or 3D, got {x.ndim}D. "
-                f"Shape: {x.shape}"
+                f"Expected input tensor to be 2D or 3D, got {x.ndim}D. Shape: {x.shape}"
             )
         return x, batch_size
+
+    def _fuse_metadata(
+        self,
+        bag_rep: torch.Tensor,
+        metadata: Optional[torch.Tensor],
+    ) -> torch.Tensor:
+        """
+        Fuse encoded metadata with bag representation (before classifier).
+        Use when the model has a single bag vector of shape (B, metadata_fusion_dim).
+
+        Args:
+            bag_rep: (batch_size, metadata_fusion_dim)
+            metadata: (batch_size, metadata_dim) or None
+
+        Returns:
+            bag_rep unchanged if no metadata, else bag_rep + metadata_encoder(metadata)
+        """
+        if metadata is None or self.metadata_encoder is None:
+            return bag_rep
+        return bag_rep + self.metadata_encoder(metadata)
+
+    def _fuse_metadata_logits(
+        self,
+        bag_logits: torch.Tensor,
+        metadata: Optional[torch.Tensor],
+    ) -> torch.Tensor:
+        """
+        Fuse encoded metadata at logits level (for models without a single bag_rep, e.g. Mean/Max MIL).
+        Use when the model outputs bag-level logits directly of shape (B, n_classes).
+
+        Args:
+            bag_logits: (batch_size, n_classes)
+            metadata: (batch_size, metadata_dim) or None
+
+        Returns:
+            bag_logits unchanged if no metadata, else bag_logits + metadata_to_logits(metadata_encoder(metadata))
+        """
+        if metadata is None or self.metadata_encoder is None:
+            return bag_logits
+        return bag_logits + self.metadata_to_logits(self.metadata_encoder(metadata))
 
     def _standardize_output(
         self, outputs: Tuple[Any, ...], batch_size: int
@@ -189,13 +254,16 @@ class BaseMILModel(nn.Module):
             )
 
     def forward(
-        self, x: torch.Tensor
+        self,
+        x: torch.Tensor,
+        metadata: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor], Dict]:
         """
         Forward pass with automatic batch size handling.
 
         Args:
             x: Input tensor of shape (num_instances, in_dim) or (batch_size, num_instances, in_dim)
+            metadata: Optional (batch_size, metadata_dim) for multi-modal fusion in later parts
 
         Returns:
             Standardized tuple:
@@ -205,8 +273,8 @@ class BaseMILModel(nn.Module):
         # Normalize input to 3D
         x_normalized, batch_size = self._normalize_input(x)
 
-        # Call the implementation
-        outputs = self._forward_impl(x_normalized)
+        # Call the implementation (subclasses may fuse metadata before classifier)
+        outputs = self._forward_impl(x_normalized, metadata=metadata)
 
         # Standardize outputs
         standardized_outputs = self._standardize_output(outputs, batch_size)
@@ -216,13 +284,20 @@ class BaseMILModel(nn.Module):
         # single samples to ensure compatibility with DataLoader outputs.
         return standardized_outputs
 
-    def _forward_impl(self, x: torch.Tensor) -> Tuple[Any, ...]:
+    def _forward_impl(
+        self,
+        x: torch.Tensor,
+        metadata: Optional[torch.Tensor] = None,
+    ) -> Tuple[Any, ...]:
         """
         Implementation of the forward pass.
         Subclasses must implement this method.
+        When metadata is not None, fuse it before the classifier using
+        _fuse_metadata(bag_rep, metadata) or _fuse_metadata_logits(bag_logits, metadata).
 
         Args:
             x: Normalized 3D input tensor (batch_size, num_instances, in_dim)
+            metadata: Optional (batch_size, metadata_dim) for multi-modal fusion
 
         Returns:
             Tuple of outputs (format depends on is_survival flag)

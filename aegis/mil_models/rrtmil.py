@@ -733,9 +733,7 @@ class CrossRegionAttntion(nn.Module):
         )  # nW, sW, region_size*region_size, C
         attn_regions = torch.einsum(
             "w n p c, w n p -> w n p c", attn_regions, dispatch_weights
-        ).sum(
-            dim=1
-        )  # nW, region_size*region_size, C
+        ).sum(dim=1)  # nW, region_size*region_size, C
 
         # merge regions
         attn_regions = attn_regions.view(-1, region_size, region_size, C)
@@ -1036,6 +1034,8 @@ class RRT(BaseMILModel):
         epeg=True,
         min_region_num=0,
         qkv_bias=True,
+        metadata_dim=0,
+        metadata_fusion_dim=None,
         **kwargs,
     ):
         # Map standard parameters to original ones
@@ -1044,7 +1044,14 @@ class RRT(BaseMILModel):
         if dropout_rate is not None:
             dropout = dropout_rate
 
-        super().__init__(in_dim=input_dim, n_classes=n_classes, is_survival=is_survival)
+        super().__init__(
+            in_dim=input_dim,
+            n_classes=n_classes,
+            is_survival=is_survival,
+            metadata_dim=metadata_dim,
+            metadata_fusion_dim=metadata_fusion_dim or mlp_dim,
+            **kwargs,
+        )
 
         self.patch_to_emb = [nn.Linear(input_dim, 512)]
 
@@ -1130,6 +1137,7 @@ class RRT(BaseMILModel):
 
         # Stack: (batch_size, final_dim)
         bag_reprs = torch.stack(bag_reprs)
+        bag_reprs = self._fuse_metadata(bag_reprs, metadata)
 
         # Prediction
         logits = self.predictor(bag_reprs)  # (batch_size, n_classes)

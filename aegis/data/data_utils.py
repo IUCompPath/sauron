@@ -163,17 +163,21 @@ class SubsetSequentialSampler(Sampler[int]):  # Use Generic type hint
 
 def collate_mil_features(
     batch: List[
-        Tuple[torch.Tensor, int]
-    ],  # Assumes batch item is (features_tensor, label_int)
+        Union[Tuple[torch.Tensor, int], Tuple[torch.Tensor, int, torch.Tensor]]
+    ],  # (features, label) or (features, label, metadata_tensor)
     n_subsamples: Optional[
         int
     ] = None,  # If provided, pad to this instead of max_instances
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Union[
+    Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+]:
     """
-    Collate function for MIL when batch items are (Tensor_Features, Label_Int).
+    Collate function for MIL when batch items are (Tensor_Features, Label_Int)
+    or (Tensor_Features, Label_Int, Metadata_Tensor) for multi-modal.
     Handles both batch_size=1 and batch_size>1 consistently.
     Always returns 3D tensor: (batch_size, max_instances, feature_dim) for features.
     Labels are converted to a LongTensor.
+    If metadata is present, returns (features, labels, metadata) with metadata (batch_size, metadata_dim).
 
     If n_subsamples is provided and > 0, pads all bags to n_subsamples instead of max_instances.
     This prevents excessive padding when using patch sampling.
@@ -190,6 +194,7 @@ def collate_mil_features(
     try:
         features_list = [item[0] for item in batch]
         labels = torch.tensor([item[1] for item in batch], dtype=torch.long)
+        has_metadata = len(batch) > 0 and len(batch[0]) >= 3
 
         # Handle both batch_size=1 and batch_size>1 consistently
         # Always return 3D tensor: (batch_size, max_instances, feature_dim)
@@ -219,6 +224,10 @@ def collate_mil_features(
             num_instances = min(feat.shape[0], target_instances)
             features[i, :num_instances] = feat[:num_instances]
             # Remaining positions are already zeros from initialization
+
+        if has_metadata:
+            metadata = torch.stack([item[2] for item in batch], dim=0)
+            return features, labels, metadata
     except Exception as e:
         print("Error during collation (collate_mil_features):")
         for i, item in enumerate(batch):

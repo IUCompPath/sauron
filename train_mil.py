@@ -240,6 +240,11 @@ def main_experiment_runner(args: argparse.Namespace):
             "apply_sig": getattr(args, "apply_sig_survival", False),
             "signatures_csv_path": getattr(args, "signatures_csv", None),
             "shuffle_slide_data": getattr(args, "shuffle_data_survival", False),
+            "metadata_columns": (
+                [c.strip() for c in args.metadata_cols.split(",") if c.strip()]
+                if getattr(args, "metadata_cols", None)
+                else None
+            ),
         }
 
         label_mapping_str = getattr(args, "label_mapping", None)
@@ -256,7 +261,10 @@ def main_experiment_runner(args: argparse.Namespace):
         data_manager_instance = get_data_manager(**manager_params)
 
         args.n_classes = data_manager_instance.num_classes
+        args.metadata_dim = getattr(data_manager_instance, "metadata_dim", 0)
         print(f"DataManager initialized. Number of classes: {args.n_classes}")
+        if args.metadata_dim:
+            print(f"Multi-modal: metadata_dim={args.metadata_dim}")
         if args.n_classes == 0 and args.task_type.lower() == "classification":
             print(
                 "Warning: Number of classes is 0 for classification task. Check data and label mapping."

@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -92,8 +94,18 @@ class DSMIL(BaseMILModel):
         n_classes: int,
         dropout_rate: float = 0.25,
         is_survival: bool = False,
+        metadata_dim: int = 0,
+        metadata_fusion_dim: Optional[int] = None,
+        **kwargs,
     ):
-        super().__init__(in_dim=in_dim, n_classes=n_classes, is_survival=is_survival)
+        super().__init__(
+            in_dim=in_dim,
+            n_classes=n_classes,
+            is_survival=is_survival,
+            metadata_dim=metadata_dim,
+            metadata_fusion_dim=metadata_fusion_dim or 512,
+            **kwargs,
+        )
 
         # Create feature extractor (FCLayer equivalent)
         self.feature_extractor = nn.Sequential(
@@ -144,6 +156,7 @@ class DSMIL(BaseMILModel):
 
         # Stack results
         bag_logits = torch.stack(bag_logits_list)  # (batch_size, n_classes)
+        bag_logits = self._fuse_metadata_logits(bag_logits, metadata)
         # For attention, we'll return the first bag's attention or average
         attention_scores = attention_list[0] if len(attention_list) > 0 else None
 

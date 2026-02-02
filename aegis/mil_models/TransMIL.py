@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -366,8 +368,18 @@ class TransMIL(BaseMILModel):
         dropout_rate: float = 0.1,  # General dropout for FC, attention, FF
         activation: str = "gelu",
         is_survival: bool = False,
+        metadata_dim: int = 0,
+        metadata_fusion_dim: Optional[int] = None,
+        **kwargs,
     ):
-        super().__init__(in_dim=in_dim, n_classes=n_classes, is_survival=is_survival)
+        super().__init__(
+            in_dim=in_dim,
+            n_classes=n_classes,
+            is_survival=is_survival,
+            metadata_dim=metadata_dim,
+            metadata_fusion_dim=metadata_fusion_dim or embed_dim,
+            **kwargs,
+        )
 
         fc1_layers = [nn.Linear(in_dim, embed_dim)]
         fc1_layers.append(get_activation_fn(activation))
@@ -399,7 +411,7 @@ class TransMIL(BaseMILModel):
         self.classifier = nn.Linear(embed_dim, n_classes)
         self.apply(initialize_weights)  # Assuming custom weight init
 
-    def _forward_impl(self, x: torch.Tensor):
+    def _forward_impl(self, x: torch.Tensor, metadata: Optional[torch.Tensor] = None):
         # x: (batch_size, num_instances, in_dim) - already normalized by base class
         batch_size = x.shape[0]
 
@@ -447,6 +459,7 @@ class TransMIL(BaseMILModel):
         cls_representation = self.final_norm(
             h_final_transformed[:, 0]
         )  # (B, embed_dim)
+        cls_representation = self._fuse_metadata(cls_representation, metadata)
 
         logits = self.classifier(cls_representation)  # (B, n_classes)
 

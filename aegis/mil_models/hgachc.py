@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -30,8 +32,18 @@ class HGACrossHeadCom(BaseMILModel):
         dropout_rate: float = 0.25,
         activation: str = "relu",
         is_survival: bool = False,
+        metadata_dim: int = 0,
+        metadata_fusion_dim: Optional[int] = None,
+        **kwargs,
     ):
-        super().__init__(in_dim=in_dim, n_classes=n_classes, is_survival=is_survival)
+        super().__init__(
+            in_dim=in_dim,
+            n_classes=n_classes,
+            is_survival=is_survival,
+            metadata_dim=metadata_dim,
+            metadata_fusion_dim=metadata_fusion_dim or embed_dim,
+            **kwargs,
+        )
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         self.head_dim = self.embed_dim // self.num_heads
@@ -63,7 +75,7 @@ class HGACrossHeadCom(BaseMILModel):
         self.classifier = nn.Linear(self.embed_dim, n_classes)
         self.apply(initialize_weights)
 
-    def _forward_impl(self, x: torch.Tensor):
+    def _forward_impl(self, x: torch.Tensor, metadata: Optional[torch.Tensor] = None):
         batch_size, num_instances, _ = x.size()
 
         instance_features = self.feature_extractor(x)
@@ -100,6 +112,7 @@ class HGACrossHeadCom(BaseMILModel):
         attn_weights = self.attention_pool(attn_output)
         attn_weights = F.softmax(attn_weights, dim=1)
         bag_representation = torch.sum(attn_output * attn_weights, dim=1)
+        bag_representation = self._fuse_metadata(bag_representation, metadata)
 
         logits = self.classifier(bag_representation)
         predictions = torch.topk(logits, 1, dim=1)[1]

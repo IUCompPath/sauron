@@ -321,6 +321,12 @@ def get_mil_args(parser: argparse.ArgumentParser):
         help="Name of the column containing slide IDs.",
     )
     parser.add_argument(
+        "--metadata_cols",
+        type=str,
+        default=None,
+        help="Comma-separated CSV column names to use as extra modalities (e.g. OncoTreeSiteCode). Encoded as one-hot and concatenated with patch features.",
+    )
+    parser.add_argument(
         "--results_dir",
         default="./results",
         help="Path to the directory where training results and model checkpoints will be saved. Default is './results'.",

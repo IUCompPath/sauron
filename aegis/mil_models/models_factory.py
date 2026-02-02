@@ -14,7 +14,7 @@ from aegis.mil_models.TransMIL import TransMIL
 from aegis.mil_models.WIKGMIL import WiKG
 
 try:
-    from aegis.mil_models.mambaMIL import MambaMIL, HAS_MAMBA_SSM
+    from aegis.mil_models.mambaMIL import HAS_MAMBA_SSM, MambaMIL
 
     HAS_MAMBA = HAS_MAMBA_SSM
 except ImportError:
@@ -40,6 +40,9 @@ def mil_model_factory(args, in_dim=None):
             )
             in_dim = args.in_dim
 
+    metadata_dim = getattr(args, "metadata_dim", 0)
+    metadata_fusion_dim = getattr(args, "embed_dim", 512)
+
     # Determine if the task is survival analysis
     is_survival_task = (
         getattr(args, "task_type", "classification").lower() == "survival"
@@ -47,14 +50,20 @@ def mil_model_factory(args, in_dim=None):
 
     model_type = args.model_type.lower()
 
+    def _meta_kw():
+        return {
+            "metadata_dim": metadata_dim,
+            "metadata_fusion_dim": metadata_fusion_dim,
+        }
+
     if model_type == "att_mil":
-        # Assuming DAttention is the intended class for 'att_mil'
         return DAttention(
             in_dim=in_dim,
             n_classes=args.n_classes,
             dropout_rate=args.drop_out,
             activation=getattr(args, "activation", "relu"),
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
     elif model_type == "trans_mil":
         return TransMIL(
@@ -63,6 +72,7 @@ def mil_model_factory(args, in_dim=None):
             dropout_rate=args.drop_out,
             activation=getattr(args, "activation", "gelu"),
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
     elif model_type == "max_mil":
         return MaxMIL(
@@ -71,6 +81,7 @@ def mil_model_factory(args, in_dim=None):
             dropout_rate=args.drop_out,
             activation=getattr(args, "activation", "relu"),
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
     elif model_type == "mean_mil":
         return MeanMIL(
@@ -79,6 +90,7 @@ def mil_model_factory(args, in_dim=None):
             dropout_rate=args.drop_out,
             activation=getattr(args, "activation", "relu"),
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
     elif model_type == "s4model":
         return S4Model(
@@ -87,6 +99,7 @@ def mil_model_factory(args, in_dim=None):
             dropout_rate=args.drop_out,
             activation=getattr(args, "activation", "gelu"),
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
     elif model_type == "wikgmil":
         return WiKG(
@@ -94,6 +107,7 @@ def mil_model_factory(args, in_dim=None):
             n_classes=args.n_classes,
             dropout_rate=args.drop_out,
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
     elif model_type == "diffabmil":
         return DifferentiableAttentionMIL(
@@ -101,6 +115,7 @@ def mil_model_factory(args, in_dim=None):
             n_classes=args.n_classes,
             dropout_rate=args.drop_out,
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
     elif model_type == "hgachc":
         return HGACrossHeadCom(
@@ -108,6 +123,7 @@ def mil_model_factory(args, in_dim=None):
             n_classes=args.n_classes,
             dropout_rate=args.drop_out,
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
     elif model_type == "rrtmil":
         return rrtmil(
@@ -115,6 +131,7 @@ def mil_model_factory(args, in_dim=None):
             n_classes=args.n_classes,
             dropout_rate=args.drop_out,
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
     elif model_type == "dsmil":
         return DSMIL(
@@ -122,6 +139,7 @@ def mil_model_factory(args, in_dim=None):
             n_classes=args.n_classes,
             dropout_rate=args.drop_out,
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
 
     elif model_type == "moemil":
@@ -132,6 +150,7 @@ def mil_model_factory(args, in_dim=None):
             num_experts=getattr(args, "num_experts", 4),
             dropout_rate=args.drop_out,
             is_survival=is_survival_task,
+            **_meta_kw(),
         )
     elif model_type == "mambamil":
         if not HAS_MAMBA:
@@ -147,6 +166,7 @@ def mil_model_factory(args, in_dim=None):
             layer=getattr(args, "layer", 2),
             rate=getattr(args, "rate", 10),
             type=getattr(args, "mamba_type", "SRMamba"),
+            **_meta_kw(),
         )
     else:
         raise ValueError(f"Unknown MIL model type: {args.model_type}")

@@ -135,9 +135,12 @@ def run_mil_training_job(args: argparse.Namespace) -> None:
         manager_params = DataManagerParamsBuilder.build(args)
         data_manager_instance = get_data_manager(**manager_params)
 
-        # Get n_classes from DataManager and set it in args for train_fold
+        # Get n_classes and metadata_dim from DataManager and set in args for train_fold
         args.n_classes = data_manager_instance.num_classes
+        args.metadata_dim = getattr(data_manager_instance, "metadata_dim", 0)
         print(f"DataManager initialized. Number of classes: {args.n_classes}")
+        if args.metadata_dim:
+            print(f"Multi-modal: metadata_dim={args.metadata_dim}")
         if args.n_classes == 0 and is_classification(args):
             print(
                 "Warning: Number of classes is 0 for classification task. "

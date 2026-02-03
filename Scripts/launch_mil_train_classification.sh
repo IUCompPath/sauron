@@ -24,12 +24,13 @@ SLIDE_ID_COL="slide_id"
 # Comma-separated list of columns from your CSV to use as side-information.
 # The model will use the "Concatenation + Projection" strategy to fuse these.
 # Example: "age,sex,smoking_status" or "OncoTreeSiteCode"
-METADATA_COLS="age,sex" 
+METADATA_COLS="age,sex,OncoTreeSiteCode" 
 
 # Model Configuration
 MODEL_TYPE='att_mil' # 'att_mil', 'trans_mil', 'mamba_mil', 'clam_sb', 'clam_mb'
 BACKBONE='titan'    # 'resnet50', 'plip', 'titan'
-IN_DIM=1024            # 1024 for titan/resnet50, 512 for plip
+# Leave empty to infer from FM feature files; set e.g. 1024 to override
+IN_DIM=""
 
 # MambaMIL Specific Params (if MODEL_TYPE is mamba_mil)
 MAMBA_TYPE="SRMamba"   # 'Mamba', 'BiMamba', 'SRMamba'
@@ -61,7 +62,6 @@ ARGS+=(
     "--exp_code" "$EXP_CODE"
     "--model_type" "$MODEL_TYPE"
     "--backbone" "$BACKBONE"
-    "--in_dim" "$IN_DIM"
     "--max_epochs" "$MAX_EPOCHS"
     "--lr" "$LR"
     "--reg" "$WEIGHT_DECAY"
@@ -85,6 +85,11 @@ ARGS+=(
     "--split_dir" "${SPLITS_DIR_BASE}/${TASK_NAME}_kfold"
 )
 
+# Optional: set in_dim explicitly (omit to infer from FM feature files)
+if [ -n "${IN_DIM:-}" ]; then
+    ARGS+=("--in_dim" "$IN_DIM")
+fi
+
 # Multi-modal: add metadata columns for classification
 if [ -n "${METADATA_COLS:-}" ]; then
     ARGS+=("--metadata_cols" "$METADATA_COLS")
@@ -96,6 +101,7 @@ echo "Starting aegis MIL Training Job (Classification)"
 echo "Experiment Code: $EXP_CODE"
 echo "Task: $TASK_NAME"
 echo "Model: $MODEL_TYPE"
+echo "In dim: ${IN_DIM:-infer from FM features}"
 echo "Metadata Columns: ${METADATA_COLS:-None}"
 echo "------------------------------------------------------------------------"
 echo "Full command:"

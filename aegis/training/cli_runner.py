@@ -7,6 +7,7 @@ import pandas as pd
 from torch.utils.tensorboard import SummaryWriter
 
 # Relative imports within the aegis package
+from aegis.data.data_utils import infer_feature_dim_from_data
 from aegis.data.dataset_factory import determine_split_directory, get_data_manager
 
 # IMPORTANT: Ensure aegis/parse/argparse.py is renamed to aegis/parse/cli_parsers.py
@@ -138,6 +139,25 @@ def run_mil_training_job(args: argparse.Namespace) -> None:
         # Get n_classes and metadata_dim from DataManager and set in args for train_fold
         args.n_classes = data_manager_instance.num_classes
         args.metadata_dim = getattr(data_manager_instance, "metadata_dim", 0)
+
+        # Infer in_dim from FM features when not provided
+        if getattr(args, "in_dim", None) is None and getattr(args, "backbone", None):
+            slide_ids = (
+                data_manager_instance.slide_data["slide_id"].tolist()[:20]
+                if hasattr(data_manager_instance, "slide_data")
+                and "slide_id" in data_manager_instance.slide_data.columns
+                else []
+            )
+            inferred = infer_feature_dim_from_data(
+                data_manager_instance.data_directory,
+                args.backbone,
+                slide_ids,
+                patch_size=getattr(args, "patch_size", ""),
+                use_hdf5=getattr(args, "use_hdf5", False),
+            )
+            if inferred is not None:
+                args.in_dim = inferred
+
         print(f"DataManager initialized. Number of classes: {args.n_classes}")
         if args.metadata_dim:
             print(f"Multi-modal: metadata_dim={args.metadata_dim}")

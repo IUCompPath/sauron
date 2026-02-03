@@ -1,5 +1,6 @@
 import collections
 import functools
+import os
 from typing import Iterator, List, Optional, Tuple, Union
 
 import numpy as np
@@ -159,6 +160,88 @@ class SubsetSequentialSampler(Sampler[int]):  # Use Generic type hint
 
     def __len__(self) -> int:
         return len(self.indices)
+
+
+def infer_feature_dim_from_data(
+    data_directory: Union[str, dict],
+    backbone: str,
+    slide_ids: List[str],
+    patch_size: str = "",
+    use_hdf5: bool = False,
+    verbose: bool = True,
+) -> Optional[int]:
+    """
+    Infer feature dimension by loading the first available foundation-model feature file.
+
+    Tries each slide_id until a .pt (or .h5) file is found under the expected path,
+    then returns the last dimension of the feature tensor (number of features per patch).
+
+    Path for .pt: data_directory / patch_subdir / "pt_files" / backbone / {slide_id}.pt
+    Path for .h5: data_directory / {slide_id}.h5
+
+    Args:
+        data_directory: Root path(s) for feature files. If dict, tries each value.
+        backbone: Backbone name (e.g. 'titan', 'resnet50') used in pt_files subdir.
+        slide_ids: List of slide IDs to try (e.g. from slide_data).
+        patch_size: Optional patch size subdir (e.g. '256'); empty or '512' means no subdir.
+        use_hdf5: If True, look for .h5 files instead of .pt.
+        verbose: If True, log when dimension is inferred.
+
+    Returns:
+        Feature dimension (int) if a file was loaded, else None.
+    """
+    if not slide_ids:
+        return None
+    # Normalize to list of (data_dir, slide_id) for uniform handling
+    if isinstance(data_directory, dict):
+        dirs = list(data_directory.values())
+    else:
+        dirs = [data_directory]
+    patch_subdir = ""
+    if patch_size and str(patch_size) != "512":
+        patch_subdir = str(patch_size)
+    for data_dir in dirs:
+        if not data_dir or not os.path.isdir(data_dir):
+            continue
+        for slide_id in slide_ids:
+            if use_hdf5:
+                path = os.path.join(data_dir, f"{slide_id}.h5")
+                if not os.path.isfile(path):
+                    continue
+                try:
+                    import h5py
+
+                    with h5py.File(path, "r") as f:
+                        if "features" not in f:
+                            continue
+                        dim = int(f["features"].shape[-1])
+                    if verbose:
+                        print(f"Inferred feature dim={dim} from FM features at {path}")
+                    return dim
+                except Exception:
+                    continue
+            else:
+                path = os.path.join(
+                    data_dir,
+                    patch_subdir,
+                    "pt_files",
+                    backbone,
+                    f"{slide_id}.pt",
+                )
+                if not os.path.isfile(path):
+                    continue
+                try:
+                    x = torch.load(path, map_location="cpu")
+                    if hasattr(x, "shape"):
+                        dim = int(x.shape[-1])
+                    else:
+                        continue
+                    if verbose:
+                        print(f"Inferred feature dim={dim} from FM features at {path}")
+                    return dim
+                except Exception:
+                    continue
+    return None
 
 
 def collate_mil_features(

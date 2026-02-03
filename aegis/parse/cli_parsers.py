@@ -442,8 +442,8 @@ def get_mil_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--in_dim",
         type=int,
-        default=1024,
-        help="Set the input dimension for the model. This should match the output of the backbone network.",
+        default=None,
+        help="Input feature dimension. If not set, inferred from the first available FM feature file, else from backbone.",
     )
 
     # MambaMIL Specific Configuration

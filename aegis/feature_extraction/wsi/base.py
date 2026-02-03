@@ -6,7 +6,7 @@ from __future__ import annotations
 import os
 import warnings
 from abc import abstractmethod
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import List, Literal, Optional, Tuple, Union
 
 import geopandas as gpd
 import numpy as np

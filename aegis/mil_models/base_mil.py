@@ -23,7 +23,7 @@ class BaseMILModel(nn.Module):
     -------------------------
     This class implements a robust "Concatenation + Projection" strategy for fusing
     slide-level metadata (e.g., age, site code) with the bag representation.
-    
+
     Old behavior (deprecated): bag_rep + encoded_metadata
     New behavior (v2): fusion_net(concat([bag_rep, encoded_metadata]))
 

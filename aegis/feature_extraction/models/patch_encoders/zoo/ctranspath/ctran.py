@@ -1,5 +1,4 @@
 # Credits to original CTransPath implementation: https://github.com/Xiyue-Wang/TransPath/blob/main/ctran.py
-import pdb
 
 import torch.nn as nn
 from timm_ctp import create_model as ctp_create_model

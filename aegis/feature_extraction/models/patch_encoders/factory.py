@@ -236,7 +236,7 @@ class MuskInferenceEncoder(BasePatchEncoder):
         self.return_global = return_global
 
         try:
-            from musk import modeling, utils
+            from musk import utils
         except Exception:
             traceback.print_exc()
             raise Exception(

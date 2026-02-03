@@ -175,7 +175,6 @@ class JpegCompressionTransform:
 
     def __call__(self, image):
         import cv2
-        import numpy as np
         from PIL import Image
 
         # Convert PIL Image to NumPy array

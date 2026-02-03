@@ -733,7 +733,9 @@ class CrossRegionAttntion(nn.Module):
         )  # nW, sW, region_size*region_size, C
         attn_regions = torch.einsum(
             "w n p c, w n p -> w n p c", attn_regions, dispatch_weights
-        ).sum(dim=1)  # nW, region_size*region_size, C
+        ).sum(
+            dim=1
+        )  # nW, region_size*region_size, C
 
         # merge regions
         attn_regions = attn_regions.view(-1, region_size, region_size, C)

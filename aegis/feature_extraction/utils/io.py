@@ -702,7 +702,7 @@ def mask_to_gdf(
     )
 
     if len(foreground_contours) == 0:
-        print(f"[Warning] No contour were detected. Contour GeoJSON will be empty.")
+        print("[Warning] No contour were detected. Contour GeoJSON will be empty.")
         return gpd.GeoDataFrame(columns=["tissue_id", "geometry"])
     else:
         # Scale contours back to level 0 (original resolution)
@@ -874,7 +874,7 @@ def fix_invalid_polygon(polygon: Polygon) -> Polygon:
     # Fallback to a warning and returning potentially invalid or empty polygon if all attempts fail
     # Or, raise an error if strict validity is required.
     warnings.warn(
-        f"Failed to make a valid polygon after multiple attempts. Original polygon might be too complex or malformed."
+        "Failed to make a valid polygon after multiple attempts. Original polygon might be too complex or malformed."
     )
     return polygon  # Return the last attempt or original polygon
 

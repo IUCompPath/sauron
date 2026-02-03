@@ -1,7 +1,7 @@
 import os
 import traceback
 from abc import abstractmethod
-from typing import Callable, Literal, Optional
+from typing import Literal, Optional
 
 import torch
 from torchvision import transforms
@@ -237,7 +237,7 @@ class MuskInferenceEncoder(BasePatchEncoder):
         self.return_global = return_global
 
         try:
-            from musk import modeling, utils
+            from musk import utils
         except:
             traceback.print_exc()
             raise Exception(
@@ -812,7 +812,6 @@ class UNIInferenceEncoder(BasePatchEncoder):
         timm_kwargs={"dynamic_img_size": True, "num_classes": 0, "init_values": 1e-5},
     ):
         import timm
-        from torchvision import transforms
 
         self.enc_name = "uni_v1"
         weights_path = self._get_weights_path()
@@ -874,7 +873,6 @@ class UNIv2InferenceEncoder(BasePatchEncoder):
 
     def _build(self):
         import timm
-        from torchvision import transforms
 
         self.enc_name = "uni_v2"
         weights_path = self._get_weights_path()
@@ -949,7 +947,6 @@ class GigaPathInferenceEncoder(BasePatchEncoder):
         self,
     ):
         import timm
-        from torchvision import transforms
 
         self.enc_name = "gigapath"
         weights_path = self._get_weights_path()
@@ -1023,7 +1020,6 @@ class VirchowInferenceEncoder(BasePatchEncoder):
     ):
         import timm
         import torchvision
-        from torchvision import transforms
 
         self.enc_name = "virchow"
         weights_path = self._get_weights_path()
@@ -1107,7 +1103,6 @@ class Virchow2InferenceEncoder(BasePatchEncoder):
     ):
         import timm
         import torchvision
-        from torchvision import transforms
 
         self.enc_name = "virchow2"
         weights_path = self._get_weights_path()
@@ -1185,7 +1180,6 @@ class HOptimus0InferenceEncoder(BasePatchEncoder):
 
     def _build(self, timm_kwargs={"init_values": 1e-5, "dynamic_img_size": False}):
         import timm
-        from torchvision import transforms
 
         self.enc_name = "hoptimus0"
         weights_path = self._get_weights_path()
@@ -1251,7 +1245,6 @@ class HOptimus1InferenceEncoder(BasePatchEncoder):
         self, timm_kwargs={"init_values": 1e-5, "dynamic_img_size": False}, **kwargs
     ):
         import timm
-        from torchvision import transforms
 
         self.enc_name = "hoptimus1"
         weights_path = self._get_weights_path()
@@ -1419,7 +1412,6 @@ class Midnight12kInferenceEncoder(BasePatchEncoder):
         super().__init__(**build_kwargs)
 
     def _build(self, return_type: Literal["cls_token", "cls+mean"] = "cls_token"):
-        from torchvision import transforms
         from transformers import AutoModel
 
         from aegis.feature_extraction.models.patch_encoders.utils.constants import (

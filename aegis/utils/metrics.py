@@ -1,4 +1,3 @@
-from typing import Tuple
 
 import numpy as np
 from sklearn.metrics import (
@@ -17,7 +16,7 @@ def _calculate_classification_auc(
         # Ensure there are at least two classes in labels for AUC calculation
         if len(np.unique(all_labels_np)) < 2:
             print(
-                f"Warning: Only one class present in labels for binary AUC calculation. AUC set to 0.0."
+                "Warning: Only one class present in labels for binary AUC calculation. AUC set to 0.0."
             )
             return 0.0
         try:
@@ -51,7 +50,7 @@ def _calculate_classification_auc(
             # Ensure at least two classes are present in the actual data for meaningful OvR AUC
             if len(np.unique(all_labels_np)) < 2:
                 print(
-                    f"Warning: Less than 2 unique classes present in labels for multi-class AUC. AUC set to 0.0."
+                    "Warning: Less than 2 unique classes present in labels for multi-class AUC. AUC set to 0.0."
                 )
                 return 0.0
 

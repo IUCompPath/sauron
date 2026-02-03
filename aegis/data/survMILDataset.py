@@ -109,7 +109,7 @@ class SurvivalDataManager:
 
                 raw_data = pd.concat(dfs, ignore_index=True)
             except FileNotFoundError as e:
-                raise FileNotFoundError(f"One of the split CSV files not found") from e
+                raise FileNotFoundError("One of the split CSV files not found") from e
         else:
             raise ValueError("Either csv_path or train_csv must be provided.")
         self.slide_data = self._rename_cols(

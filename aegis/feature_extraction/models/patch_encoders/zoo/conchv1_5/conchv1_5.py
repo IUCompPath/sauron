@@ -1,9 +1,8 @@
 """Modified based on https://github.com/bytedance/ibot/blob/da316d82636a7a7356835ef224b13d5f3ace0489/models/vision_transformer.py and timm (https://github.com/huggingface/pytorch-image-models) v0.9.2"""
 
 import math
-from collections import OrderedDict
 from functools import partial
-from typing import Callable, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import timm
 from timm.layers import Mlp, DropPath, trunc_normal_, PatchDropout, use_fused_attn
@@ -16,8 +15,6 @@ from timm.models.vision_transformer import (
 )
 
 from enum import Enum
-from typing import Union
-from typing import List, Optional, Callable
 
 import torch
 from torch import nn, einsum

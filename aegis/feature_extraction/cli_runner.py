@@ -2,7 +2,6 @@
 import argparse
 import logging
 import os
-import sys
 from queue import Queue
 from threading import Thread
 

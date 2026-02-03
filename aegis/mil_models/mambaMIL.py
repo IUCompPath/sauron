@@ -138,7 +138,7 @@ class MambaMIL(BaseMILModel):
 
         self.apply(initialize_weights)
 
-    def _forward_impl(self, x: torch.Tensor):
+    def _forward_impl(self, x: torch.Tensor, metadata=None):
         # x: (batch_size, num_instances, in_dim) - already normalized by base class
         h = x.float()  # [B, n, in_dim]
 

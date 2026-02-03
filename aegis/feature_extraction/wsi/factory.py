@@ -1,5 +1,5 @@
 import os
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional
 
 import openslide
 from PIL import Image

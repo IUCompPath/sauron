@@ -1,8 +1,7 @@
 import argparse
 import time
-from typing import Dict, Optional
+from typing import Dict
 
-import torch
 from tqdm import tqdm
 
 from aegis.data.data_utils import get_dataloader

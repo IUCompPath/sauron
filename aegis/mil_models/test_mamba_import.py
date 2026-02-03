@@ -9,7 +9,7 @@ print("Testing imports...")
 try:
     import aegis.mil_models.mambaMIL as mamba_module
 
-    print(f"Successfully imported aegis.mil_models.mambaMIL")
+    print("Successfully imported aegis.mil_models.mambaMIL")
     print(
         f"mamba_module.HAS_MAMBA_SSM: {getattr(mamba_module, 'HAS_MAMBA_SSM', 'Not Found')}"
     )

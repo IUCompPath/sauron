@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aegis"
+version = "0.0.1"
+authors = [
+  { name="Geeks-Sid", email="sid.cre8er@gmail.com" },
+]
+description = "Aegis MIL library"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "termcolor",
+    "timm",
+    "scikit-image",
+    "torch>=2.0.0",
+    "torchvision",
+    "torchaudio",
+    "einops",
+    "ninja",
+    "packaging",
+    "transformers",
+    "numpy",
+    "pandas>=2.0.0,<2.3.0",
+    "scikit-learn",
+    "scikit-survival",
+    "lifelines",
+    "tqdm",
+    "h5py",
+    "tensorboard",
+    "tensorboardX",
+    "matplotlib",
+    "seaborn",
+    "openslide-python",
+    "openslide-bin",
+    "Pillow",
+    "opencv-python-headless",
+    "geopandas",
+    "shapely",
+    "pyvips",
+    "opt_einsum"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/IUCompPath/aegis"
+"Bug Tracker" = "https://github.com/IUCompPath/aegis/issues"

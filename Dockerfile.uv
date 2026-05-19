@@ -1,0 +1,30 @@
+# Alternative Dockerfile using uv (if you want to use uv)
+# Use an official NVIDIA CUDA runtime as a parent image
+FROM nvcr.io/nvidia/pytorch:25.10-py3
+# Set the working directory in the container
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    libopenslide-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the project files into the container
+COPY . /app
+
+# Install uv
+RUN pip3 install uv
+
+# Create a requirements file without torch/torchvision/torchaudio (already in base image)
+RUN grep -v "^torch" aegis/requirements.txt | grep -v "^torchvision" | grep -v "^torchaudio" > /tmp/requirements_no_torch.txt || true
+
+# Install dependencies using uv (uv will use the system Python, not create a venv)
+RUN uv pip install --system -r /tmp/requirements_no_torch.txt
+
+# Install the package
+RUN pip3 install --no-cache-dir .
+
+# Set the entrypoint
+ENTRYPOINT ["aegis"]
+

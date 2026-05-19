@@ -1,0 +1,40 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="aegis",
+    version="0.1.0",
+    packages=find_packages(),
+    install_requires=[
+        "termcolor",
+        "torch>=2.0.0,<2.1.0",
+        "torchvision",
+        "torchaudio",
+        "einops",
+        "ninja",
+        "packaging",
+        "transformers",
+        "numpy",
+        "pandas>=2.0.0,<2.3.0",
+        "scikit-learn",
+        "scikit-survival==0.22.2",
+        "lifelines",
+        "tqdm",
+        "h5py",
+        "tensorboard",
+        "tensorboardX",
+        "matplotlib",
+        "seaborn",
+        "openslide-python",
+        "Pillow",
+        "opencv-python-headless",
+        "geopandas",
+        "shapely",
+        "pyvips",
+        "opt_einsum",
+    ],
+    entry_points={
+        "console_scripts": [
+            "aegis=aegis.cli:main",
+        ],
+    },
+)

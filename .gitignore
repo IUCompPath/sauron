@@ -159,4 +159,18 @@ cython_debug/
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+#.idea
+CLAM
+CPTAC_COAD/
+CPTAC_COAD_MIN/
+dummy_features/*
+dummy_features/*.h5
+node_modules/
+
+Data/*.csv
+results/*
+dummy_slides.csv
+aegis/utils/wsi-detailed-report.csv
+aegis/mil_models/csrc/
+aegis/mil_models/mamba_ssm/
+output.json

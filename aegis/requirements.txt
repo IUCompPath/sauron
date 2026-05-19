@@ -1,0 +1,43 @@
+# requirements.txt
+
+# Core ML
+torch>=2.0.0,<2.1.0 # Specify a range known to work with mamba-ssm/causal-conv1d
+torchvision
+torchaudio
+
+# Mamba Dependencies (ensure mamba-ssm is installed separately as per its instructions)
+# pip install causal-conv1d==1.1.1
+# pip install packaging
+# cd mamba && pip install .
+einops
+ninja # Often needed for C++ extensions
+packaging
+transformers # Used by mamba utils/hf.py and benchmarks
+
+# Data & Metrics
+numpy
+pandas>=2.0.0,<2.3.0
+scikit-learn
+scikit-survival==0.22.2
+lifelines # Used in original MambaMIL README
+
+# Utilities
+tqdm
+h5py
+
+# Logging & Visualization (Optional but recommended)
+tensorboard
+tensorboardX
+matplotlib
+seaborn
+# wandb # Uncomment if using Weights & Biases
+
+openslide-python
+Pillow
+opencv-python-headless
+geopandas
+shapely
+pyvips
+
+# Other potential dependencies based on imports observed
+opt_einsum # Used in S4MIL

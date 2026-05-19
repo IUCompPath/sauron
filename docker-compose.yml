@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  aegis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aegis:latest
+    container_name: aegis-container
+    
+    # Set shared memory size to 512GB as requested to fix PyTorch DataLoader errors
+    shm_size: '512gb'
+
+    # Enable GPU support (compatible with Docker Compose v1 and v2)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+        limits:
+           memory: 96G
+           cpus: '32'
+
+    # Alternative GPU configuration for newer Docker Compose versions
+    # Uncomment if the above doesn't work:
+    # runtime: nvidia
+    # environment:
+    #   - NVIDIA_VISIBLE_DEVICES=all
+
+    # Mount E: drive to /data in container
+    # For WSL: use /mnt/e
+    # For Windows native Docker: use E:/
+    volumes:
+      - /mnt/e:/data:rw # WSL path - change to E:/:/data:rw for native Windows Docker
+      - ./results:/app/results:rw # Mount results directory
+      - ./Data:/app/Data:rw # Mount Data directory if needed
+
+    # Override entrypoint to get interactive shell
+    # Remove this line if you want to use the default 'aegis' entrypoint
+    entrypoint: /bin/bash
+    stdin_open: true
+    tty: true
+
+    # Set working directory
+    working_dir: /app
+
+    # Environment variables (optional)
+    environment:
+      - PYTHONUNBUFFERED=1
